@@ -3,6 +3,7 @@ import base64
 import os
 import threading
 import time
+import webview  # <--- 【修改点1】必须导入 webview 才能使用常量
 
 # --- 严禁在此处导入 pandas, matplotlib, numpy 或 tool.read_traj_file ---
 
@@ -71,6 +72,7 @@ class Api:
         self._ensure_libs() 
 
         file_types = ('Data Files (*.csv;*.npz;*.npy)', 'All files (*.*)')
+        # 这里是打开文件，默认就是 OPEN_DIALOG，所以不需要改
         result = self.window.create_file_dialog(
             allow_multiple=False, 
             file_types=file_types
@@ -129,7 +131,9 @@ class Api:
         self._ensure_libs()
         try:
             # 1. 弹出保存对话框
+            # 【修改点2】添加 webview.SAVE_DIALOG 作为第一个参数
             save_path = self.window.create_file_dialog(
+                webview.SAVE_DIALOG, 
                 save_filename=f"traj_{index}.svg",
                 file_types=('SVG Image (*.svg)', 'PNG Image (*.png)', 'All files (*.*)')
             )

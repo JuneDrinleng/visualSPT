@@ -25,47 +25,45 @@ body {
   overflow: hidden;
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-size: 14px; /* 全局字体稍微改小 */
+  font-size: 13px; /* 全局字体再小一点，显得更精致 */
 }
 
-/* --- 侧边栏 (紧凑版) --- */
+/* --- 侧边栏 --- */
 .sidebar {
-  width: 160px; /* 宽度减小 */
+  width: 150px; /* 宽度更紧凑 */
   background-color: var(--sidebar-bg);
   color: #ecf0f1;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   z-index: 10;
 }
 
 .logo {
-  height: 50px; /* 高度减小 */
+  height: 40px; /* Logo区域压扁 */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
-  letter-spacing: 1px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .nav-btn {
   background: none;
   border: none;
   color: #bdc3c7;
-  padding: 12px 15px; /* 内边距减小 */
+  padding: 10px 15px;
   text-align: left;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: all 0.2s ease;
   width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
 }
 
 .nav-btn:hover {
@@ -79,51 +77,41 @@ body {
   border-left-color: var(--active-color);
 }
 
-/* --- 主内容区 (紧凑版) --- */
+/* --- 主内容区 --- */
 .main-content {
   flex: 1;
-  padding: 10px; /* 这里的 padding 减小，让卡片更大 */
+  padding: 0; /* 移除外围 Padding，让界面撑满 */
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: #fff; /* 整体背景白 */
 }
 
 .page {
   display: none;
   height: 100%;
-  animation: fadeIn 0.3s ease;
+  width: 100%;
 }
 .page.active {
   display: flex;
   flex-direction: column;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 卡片容器 */
+/* 卡片容器 (现在充当整个页面容器) */
 .card {
   background: white;
-  border-radius: 8px; /* 圆角稍微改小 */
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  border-radius: 0; /* 移除圆角，全屏风格 */
+  box-shadow: none;
 }
 
-/* 顶部标题栏 */
+/* 顶部标题栏 (极简模式) */
 .card-header {
-  height: 50px; /* 固定高度 */
-  padding: 0 20px;
+  height: 40px; /* 进一步压扁 */
+  padding: 0 15px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
@@ -133,7 +121,7 @@ body {
 }
 
 .card-header h1 {
-  font-size: 1rem; /* 字体减小 */
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-color);
 }
@@ -150,6 +138,7 @@ body {
   flex: 1;
   overflow: hidden;
   height: 100%;
+  min-height: 0; /* 关键：防止Flex子项溢出 */
 }
 
 /* 左侧：绘图区 */
@@ -157,9 +146,10 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #fafafa;
+  background-color: #fff; /* 纯白背景，与图片背景融合 */
   position: relative;
-  min-width: 0; /* 防止 flex 子项溢出 */
+  min-width: 0;
+  min-height: 0; /* 关键 */
 }
 
 #plot-container {
@@ -169,31 +159,47 @@ body {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  padding: 0; /* 确保无内边距 */
+  width: 100%;
+  height: 100%;
 }
 
 #plot-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 保持比例 */
+  display: none; /* 消除 inline 元素的底部空隙 */
 }
 
+/* 占位符和Loading */
 .placeholder-box {
   color: #95a5a6;
   font-size: 0.9rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 5px;
+  height: 100%;
+  width: 100%;
+  background-color: #fafafa; /* 没图的时候给个淡灰背景 */
 }
 #loading {
   display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 5;
   color: var(--active-color);
   font-weight: 600;
-  font-size: 1rem;
 }
 
-/* 底部滑块控制条 (紧凑版) */
+/* 底部滑块控制条 (极简模式) */
 #control-panel {
   background: #fff;
   padding: 0 15px;
@@ -202,14 +208,14 @@ body {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  height: 45px; /* 高度进一步压扁 */
-  font-size: 0.85rem;
+  height: 36px; /* 极致压扁 */
+  font-size: 0.8rem;
 }
 
 input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
-  height: 4px; /* 轨道变细 */
+  height: 3px; /* 轨道更细 */
   background: #dfe6e9;
   border-radius: 5px;
   outline: none;
@@ -217,59 +223,68 @@ input[type="range"] {
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px; /* 滑块变小 */
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--active-color);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  margin-top: -4.5px; /* 垂直居中修正 */
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 3px;
+  cursor: pointer;
+  background: #dfe6e9;
+  border-radius: 5px;
 }
 
-/* --- 右侧：设置面板 (紧凑版) --- */
+/* --- 右侧：设置面板 --- */
 .viz-right {
-  width: 240px; /* 宽度减小 */
-  background: #fff;
-  border-left: 1px solid #dee2e6;
-  padding: 15px;
+  width: 220px; /* 宽度减小 */
+  background: #fcfcfc;
+  border-left: 1px solid #e1e4e8;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px; /* 间距减小 */
+  gap: 10px;
   overflow-y: auto;
   flex-shrink: 0;
 }
 
 .panel-title {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #34495e;
-  margin-bottom: 5px;
-  padding-left: 8px;
+  margin-bottom: 2px;
+  padding-left: 6px;
   border-left: 3px solid #3498db;
   line-height: 1.2;
 }
 
 .setting-group {
-  background: #f8f9fa;
-  padding: 8px 10px; /* 内部填充减小 */
-  border-radius: 6px;
+  background: #fff;
+  padding: 8px;
+  border-radius: 4px;
   border: 1px solid #e9ecef;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .setting-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #555;
+  color: #666;
   margin-bottom: 4px;
   display: block;
 }
 
 .form-input {
   width: 100%;
-  padding: 4px 8px;
-  font-size: 0.85rem;
+  padding: 2px 6px;
+  font-size: 0.8rem;
   border: 1px solid #ced4da;
-  border-radius: 4px;
-  height: 28px; /* 输入框高度压扁 */
+  border-radius: 3px;
+  height: 24px; /* 输入框更矮 */
   background: #fff;
 }
 .form-input:focus {
@@ -279,19 +294,19 @@ input[type="range"]::-webkit-slider-thumb {
 .unit-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 .unit-separator {
   color: #adb5bd;
-  font-weight: bold;
+  font-size: 0.8rem;
 }
 
-/* 开关样式 (微缩版) */
+/* 开关样式 */
 .switch {
   position: relative;
   display: inline-block;
-  width: 36px; /* 变小 */
-  height: 20px;
+  width: 30px;
+  height: 16px;
 }
 .switch input {
   opacity: 0;
@@ -312,10 +327,10 @@ input[type="range"]::-webkit-slider-thumb {
 .slider:before {
   position: absolute;
   content: "";
-  height: 14px;
-  width: 14px; /* 变小 */
-  left: 3px;
-  bottom: 3px;
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  bottom: 2px;
   background-color: white;
   transition: 0.4s;
   border-radius: 50%;
@@ -324,48 +339,46 @@ input:checked + .slider {
   background-color: var(--active-color);
 }
 input:checked + .slider:before {
-  transform: translateX(16px);
+  transform: translateX(14px);
 }
 
-/* 按钮通用 */
+/* 按钮 */
 .action-btn {
   background-color: var(--active-color);
   color: white;
   border: none;
-  padding: 6px 12px; /* 按钮变小 */
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: 3px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 .action-btn:hover {
   background-color: var(--active-hover);
 }
 
-/* 底部保存按钮区域 */
+/* 底部保存按钮 */
 .action-area {
-  margin-top: auto; /* 推到底部 */
+  margin-top: auto;
   padding-top: 10px;
   border-top: 1px solid #eee;
 }
-
 .btn-save {
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   background-color: #2ecc71;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  transition: background 0.2s;
+  gap: 5px;
 }
 .btn-save:hover {
   background-color: #27ae60;
@@ -374,15 +387,8 @@ input:checked + .slider:before {
   background-color: #bdc3c7;
   cursor: not-allowed;
 }
-/* 确保这个类存在于 style.css 中 */
-.placeholder-box {
-  color: #95a5a6;
-  font-size: 0.9rem;
-  display: flex; /* 关键 */
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  height: 100%; /* 撑满父容器 */
-  width: 100%;
+#scale-input {
+  width: 100px; /* 设置一个固定的较小宽度 */
+  text-align: center; /* 让数字居中显示，看起来更专业 */
+  flex: none; /* 防止 Flex 布局将其强行拉伸 */
 }
