@@ -33,8 +33,10 @@ def read_npy_traj(file_path):
         if max_len<dimension:
             data = np.transpose(data, (1, 0))
             data = np.expand_dims(data, axis=0)
-            max_len, dimension = data.shape
-        B = 1
+            B,max_len, dimension = data.shape
+        else:
+            data = np.expand_dims(data, axis=0)
+            B,max_len, dimension = data.shape
     return data,B
 
 

@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isFileLoaded) return;
 
     const params = getPlotParams();
-    indexLbl.textContent = params.index;
+    indexLbl.textContent = params.index + 1;
 
     if (window.pywebview) {
       window.pywebview.api
@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- 5. 事件监听 ---
   slider.addEventListener("input", () => {
-    indexLbl.textContent = slider.value;
+    indexLbl.textContent = parseInt(slider.value) + 1;
   });
   slider.addEventListener("change", updatePlot);
 
@@ -152,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
             controlPanel.style.display = "flex";
             slider.max = res.total_trajs - 1;
             slider.value = 0;
-            indexLbl.textContent = "0";
+            indexLbl.textContent = "1";
             totalLbl.textContent = `/ 共 ${res.total_trajs} 条`;
             updatePlot();
           }
