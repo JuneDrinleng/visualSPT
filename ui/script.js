@@ -40,6 +40,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const zeroStartSwitch = document.getElementById("zero-start-switch");
   const xUnitInput = document.getElementById("x-unit-input");
   const yUnitInput = document.getElementById("y-unit-input");
+
+  // 【新增引用】
+  const titleInput = document.getElementById("title-input");
+  const markersSwitch = document.getElementById("markers-switch");
+
   const saveBtn = document.getElementById("saveBtn");
 
   // 状态变量
@@ -53,6 +58,9 @@ document.addEventListener("DOMContentLoaded", () => {
       zero_start: zeroStartSwitch.checked,
       x_unit: xUnitInput.value || "px",
       y_unit: yUnitInput.value || "px",
+      // 【新增参数】
+      custom_title: titleInput ? titleInput.value : "",
+      show_markers: markersSwitch ? markersSwitch.checked : true,
     };
   }
 
@@ -72,6 +80,8 @@ document.addEventListener("DOMContentLoaded", () => {
           params.zero_start,
           params.x_unit,
           params.y_unit,
+          params.custom_title, // 【新增传参】
+          params.show_markers, // 【新增传参】
         )
         .then((res) => {
           if (res.image) {
@@ -104,6 +114,14 @@ document.addEventListener("DOMContentLoaded", () => {
   zeroStartSwitch.addEventListener("change", updatePlot);
   xUnitInput.addEventListener("change", updatePlot);
   yUnitInput.addEventListener("change", updatePlot);
+
+  // 【新增监听】
+  if (titleInput) {
+    titleInput.addEventListener("change", updatePlot); // 输入框失焦或回车后刷新
+  }
+  if (markersSwitch) {
+    markersSwitch.addEventListener("change", updatePlot); // 开关切换后刷新
+  }
 
   // --- 6. 上传逻辑 ---
   uploadBtn.addEventListener("click", () => {
@@ -180,6 +198,8 @@ document.addEventListener("DOMContentLoaded", () => {
           params.zero_start,
           params.x_unit,
           params.y_unit,
+          params.custom_title, // 【新增传参】
+          params.show_markers, // 【新增传参】
         )
         .then((res) => {
           saveBtn.innerHTML = originalText;

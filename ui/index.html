@@ -143,6 +143,28 @@
                   />
                 </div>
               </div>
+              <div class="setting-group">
+                <label class="setting-label">图表标题 (Title)</label>
+                <input
+                  type="text"
+                  id="title-input"
+                  class="form-input"
+                  placeholder="留空则显示默认ID"
+                />
+              </div>
+
+              <!-- 新增：标记开关 -->
+              <div class="setting-group">
+                <div class="unit-row" style="justify-content: space-between">
+                  <label class="setting-label" style="margin: 0"
+                    >显示起终点 & 图例</label
+                  >
+                  <label class="switch">
+                    <input type="checkbox" id="markers-switch" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
 
               <div class="action-area">
                 <button id="saveBtn" class="btn-save">
