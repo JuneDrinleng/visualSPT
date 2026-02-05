@@ -172,35 +172,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const params = getPlotParams();
+    const params = getPlotParams(); // 获取当前所有参数
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = "<span>⏳</span> 保存中...";
     saveBtn.disabled = true;
 
     if (window.pywebview) {
-      window.pywebview.api
-        .save_plot(
-          params.index,
-          params.scale,
-          params.zero_start,
-          params.x_unit,
-          params.y_unit,
-          params.custom_title,
-          params.show_markers,
-          // 【新增传参】
-          params.show_title,
-          params.show_axis_labels,
-          params.show_grid,
-        )
-        .then((res) => {
-          saveBtn.innerHTML = originalText;
-          saveBtn.disabled = false;
-          if (res.success) {
-            alert("保存成功！\n路径: " + res.path);
-          } else if (res.error) {
-            alert("保存失败: " + res.error);
-          }
-        });
+      // 【关键修改】直接把 params 整个对象传过去，不要拆开传
+      window.pywebview.api.save_plot(params).then((res) => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        if (res.success) {
+          alert("保存成功！\n路径: " + res.path);
+        } else if (res.error) {
+          alert("保存失败: " + res.error);
+        }
+      });
     }
   });
 });

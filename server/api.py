@@ -9,7 +9,9 @@ import webview
 
 class Api:
     def __init__(self):
-        self.window = None
+        # 【关键修改】加下划线，变成私有变量，防止 pywebview 试图将其暴露给 JS 导致死循环
+        self._window = None 
+        
         self.trajectories = []
         self.current_file = ""
         
@@ -18,16 +20,17 @@ class Api:
         self.np = None
         self.plt = None
         self.read_trackmate_csv = None
+        self.read_npy_traj = None # 补全定义
         
         # 状态标记
         self.is_loading_libs = False
         self.libs_loaded = False
 
     def set_window(self, window):
-        self.window = window
+        # 【关键修改】使用 _window
+        self._window = window
 
     def preload_libraries(self):
-        # ... (保持不变) ...
         if self.libs_loaded or self.is_loading_libs:
             return
 
@@ -48,6 +51,17 @@ class Api:
             self.read_trackmate_csv = read_trackmate_csv
             self.read_npy_traj = read_npy_traj
             
+            # --- Matplotlib 预热 (防止第一次绘图卡顿) ---
+            try:
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.plot([0,1], [0,1])
+                fig.canvas.draw()
+                plt.close(fig)
+            except:
+                pass
+            # ----------------------------------------
+
             self.libs_loaded = True
             print("[System] 库加载完成，系统就绪。")
         except Exception as e:
@@ -56,17 +70,20 @@ class Api:
             self.is_loading_libs = False
 
     def _ensure_libs(self):
-        # ... (保持不变) ...
         if self.libs_loaded:
             return
         print("[System] 用户操作过快，转为前台加载...")
         self.preload_libraries()
 
     def process_file_dialog(self):
-        # ... (保持不变) ...
         self._ensure_libs() 
         file_types = ('Data Files (*.csv;*.npz;*.npy)', 'All files (*.*)')
-        result = self.window.create_file_dialog(allow_multiple=False, file_types=file_types)
+        
+        # 【关键修改】使用 self._window 调用方法
+        if not self._window:
+            return {"error": "Window not initialized"}
+            
+        result = self._window.create_file_dialog(allow_multiple=False, file_types=file_types)
 
         if not result: return {"cancelled": True}
         file_path = result[0]
@@ -91,13 +108,12 @@ class Api:
                     first_traj_img = self._plot_trajectory_by_index(0)
                 return {"file_path": file_path, "total_trajs": traj_number, "image": first_traj_img}
             else:
-                 return {"error": "目前仅支持 CSV 文件"}
+                 return {"error": "目前仅支持 CSV/NPY 文件"}
         except Exception as e:
             import traceback
             traceback.print_exc()
             return {"error": f"处理出错: {str(e)}"}
 
-    # 【修改】增加 3 个新参数
     def change_trajectory(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         self._ensure_libs()
         try:
@@ -111,22 +127,33 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
-    # 【修改】增加 3 个新参数
-    def save_plot(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+    def save_plot(self, options): # 【关键修改】这里只接收一个 options 参数
         self._ensure_libs()
         try:
-            save_path = self.window.create_file_dialog(
+            # 1. 先弹出保存对话框
+            save_path = self._window.create_file_dialog(
                 webview.SAVE_DIALOG, 
-                save_filename=f"traj_{index}.svg",
+                save_filename=f"traj_{options.get('index', 0)}.svg",
                 file_types=('SVG Image (*.svg)', 'PNG Image (*.png)', 'All files (*.*)')
             )
             
             if not save_path: return {"cancelled": True}
             save_path = save_path if isinstance(save_path, str) else save_path[0]
 
-            index = int(index)
-            scale = float(scale)
+            # 2. 【关键修改】从字典中手动提取参数，并设置默认值
+            # 这样无论 JS 怎么传，Python 都能精准拿到对应的 key
+            index = int(options.get('index', 0))
+            scale = float(options.get('scale', 1.0))
+            zero_start = options.get('zero_start', False)
+            x_unit = options.get('x_unit', "px")
+            y_unit = options.get('y_unit', "px")
+            custom_title = options.get('custom_title', "")
+            show_markers = options.get('show_markers', True)
+            show_title = options.get('show_title', True)
+            show_axis_labels = options.get('show_axis_labels', True)
+            show_grid = options.get('show_grid', True)
             
+            # 3. 获取数据并绘图
             traj = self.trajectories[index]
             x, y = self._extract_xy(traj)
             
@@ -140,7 +167,6 @@ class Api:
                 save_path=save_path,
                 custom_title=custom_title,
                 show_markers=show_markers,
-                # 传入新参数
                 show_title=show_title,
                 show_axis_labels=show_axis_labels,
                 show_grid=show_grid
@@ -149,16 +175,16 @@ class Api:
             return {"success": True, "path": save_path}
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {"error": str(e)}
 
-    # 【修改】增加 3 个新参数
     def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         traj = self.trajectories[index]
         x, y = self._extract_xy(traj)
         return self._generate_plot(x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)
 
     def _extract_xy(self, traj):
-        # ... (保持不变) ...
         if isinstance(traj, self.pd.DataFrame):
             if 'POSITION_X' in traj.columns and 'POSITION_Y' in traj.columns:
                 return traj['POSITION_X'].values, traj['POSITION_Y'].values
@@ -171,7 +197,6 @@ class Api:
             return traj[:, 0], traj[:, 1]
         return [], []
 
-    # 【修改】核心绘图逻辑，应用新参数
     def _generate_plot(self, x, y, title='Trajectory Visualization', scale=1.0, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         plt = self.plt
         np = self.np
@@ -187,7 +212,6 @@ class Api:
 
         if len(x) < 2: return ""
 
-        # 数据变换
         if zero_start:
             x = x - x[0]
             y = y - y[0]
@@ -211,7 +235,6 @@ class Api:
             lc.set_clim(vmin=time_axis.min(), vmax=time_axis.max())
             ax.add_collection(lc)
             
-            # 坐标轴计算
             x_min, x_max = x.min(), x.max()
             y_min, y_max = y.min(), y.max()
             x_mid = 0.5 * (x_min + x_max)
@@ -227,24 +250,18 @@ class Api:
             ax.set_ylim(y_mid - half_span, y_mid + half_span)
             ax.set_box_aspect(1)
             
-            # --- 装饰逻辑 ---
-            
-            # 1. 标记点
             if show_markers:
                 ax.plot(x[0], y[0], marker='o', color='#D9ECFF', markeredgecolor='gray', markersize=8, label='Start')
                 ax.plot(x[-1], y[-1], marker='*', color='#FFE89A', markeredgecolor='gray', markersize=12, label='End')
             
-            # 2. 标题 (新增控制)
             if show_title:
                 final_title = custom_title if custom_title.strip() else title
                 ax.set_title(final_title)
             
-            # 3. 坐标轴标签 (新增控制)
             if show_axis_labels:
                 ax.set_xlabel(f"X ({x_unit})")
                 ax.set_ylabel(f"Y ({y_unit})")
             
-            # 4. 网格线 (新增控制)
             if show_grid:
                 ax.grid(True, linestyle='--', alpha=0.3)
             else:
@@ -253,11 +270,9 @@ class Api:
             cbar = fig.colorbar(lc, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label('Time (Frame)')
             
-            # 5. 图例
             if show_markers:
                 ax.legend(loc='upper right')
 
-            # --- 输出 ---
             if save_path:
                 fmt = 'svg'
                 if save_path.lower().endswith('.png'): fmt = 'png'
