@@ -18,5 +18,25 @@ def read_trackmate_csv(file_path):
         result_array[i, :current_len, :] = traj
     return result_array,B
 
+def read_npy_traj(file_path):
+    """
+    This function is to read the traj data saved in npy format
+    """
+    data = np.load(file_path, allow_pickle=True)
+    if data.ndim == 3 :
+        B, max_len, dimension = data.shape
+        if max_len<dimension:
+            data = np.transpose(data, (0, 2, 1))
+            B, max_len, dimension = data.shape
+    elif data.ndim == 2:
+        max_len, dimension = data.shape
+        if max_len<dimension:
+            data = np.transpose(data, (1, 0))
+            data = np.expand_dims(data, axis=0)
+            max_len, dimension = data.shape
+        B = 1
+    return data,B
+
+
 if __name__ == "__main__":
     read_trackmate_csv("test_data\\traj\\trackmate-output-csv.csv")

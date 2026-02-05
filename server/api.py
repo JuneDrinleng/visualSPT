@@ -40,12 +40,13 @@ class Api:
             import matplotlib.pyplot as plt
             import pandas as pd
             import numpy as np
-            from server.tool.read_traj_file import read_trackmate_csv
+            from server.tool.read_traj_file import read_trackmate_csv, read_npy_traj
             
             self.plt = plt
             self.pd = pd
             self.np = np
             self.read_trackmate_csv = read_trackmate_csv
+            self.read_npy_traj = read_npy_traj
             
             self.libs_loaded = True
             print("[System] 库加载完成，系统就绪。")
@@ -81,6 +82,14 @@ class Api:
                     first_traj_img = self._plot_trajectory_by_index(0)
                 
                 return {"file_path": file_path, "total_trajs": traj_number, "image": first_traj_img}
+            elif file_path.endswith('.npy'):
+                traj_data, traj_number = self.read_npy_traj(file_path)
+                self.trajectories = traj_data
+                self.current_file = os.path.basename(file_path)
+                first_traj_img = ""
+                if traj_number > 0:
+                    first_traj_img = self._plot_trajectory_by_index(0)
+                return {"file_path": file_path, "total_trajs": traj_number, "image": first_traj_img}
             else:
                  return {"error": "目前仅支持 CSV 文件"}
         except Exception as e:
@@ -88,23 +97,22 @@ class Api:
             traceback.print_exc()
             return {"error": f"处理出错: {str(e)}"}
 
-    # 【修改】增加 custom_title 和 show_markers 参数
-    def change_trajectory(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True):
+    # 【修改】增加 3 个新参数
+    def change_trajectory(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         self._ensure_libs()
         try:
             index = int(index)
             scale = float(scale)
             if 0 <= index < len(self.trajectories):
-                # 传递新参数
-                img = self._plot_trajectory_by_index(index, scale, zero_start, x_unit, y_unit, custom_title, show_markers)
+                img = self._plot_trajectory_by_index(index, scale, zero_start, x_unit, y_unit, custom_title, show_markers, show_title, show_axis_labels, show_grid)
                 return {"image": img}
             else:
                 return {"error": "索引越界"}
         except Exception as e:
             return {"error": str(e)}
 
-    # 【修改】增加 custom_title 和 show_markers 参数
-    def save_plot(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True):
+    # 【修改】增加 3 个新参数
+    def save_plot(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         self._ensure_libs()
         try:
             save_path = self.window.create_file_dialog(
@@ -122,7 +130,6 @@ class Api:
             traj = self.trajectories[index]
             x, y = self._extract_xy(traj)
             
-            # 传递新参数
             msg = self._generate_plot(
                 x, y, 
                 title=f"Trajectory ID: {index}", 
@@ -131,8 +138,12 @@ class Api:
                 x_unit=x_unit, 
                 y_unit=y_unit,
                 save_path=save_path,
-                custom_title=custom_title, # 传入
-                show_markers=show_markers  # 传入
+                custom_title=custom_title,
+                show_markers=show_markers,
+                # 传入新参数
+                show_title=show_title,
+                show_axis_labels=show_axis_labels,
+                show_grid=show_grid
             )
             
             return {"success": True, "path": save_path}
@@ -140,11 +151,11 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
-    # 【修改】增加 custom_title 和 show_markers 参数
-    def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True):
+    # 【修改】增加 3 个新参数
+    def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         traj = self.trajectories[index]
         x, y = self._extract_xy(traj)
-        return self._generate_plot(x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers)
+        return self._generate_plot(x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)
 
     def _extract_xy(self, traj):
         # ... (保持不变) ...
@@ -160,8 +171,8 @@ class Api:
             return traj[:, 0], traj[:, 1]
         return [], []
 
-    # 【修改】核心绘图逻辑
-    def _generate_plot(self, x, y, title='Trajectory Visualization', scale=1.0, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True):
+    # 【修改】核心绘图逻辑，应用新参数
+    def _generate_plot(self, x, y, title='Trajectory Visualization', scale=1.0, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         plt = self.plt
         np = self.np
         from matplotlib.collections import LineCollection
@@ -176,12 +187,10 @@ class Api:
 
         if len(x) < 2: return ""
 
-        # A. 起点归零
+        # 数据变换
         if zero_start:
             x = x - x[0]
             y = y - y[0]
-        
-        # B. 比例尺缩放
         if scale != 1.0 and scale != 0:
             x = x * scale
             y = y * scale
@@ -202,7 +211,7 @@ class Api:
             lc.set_clim(vmin=time_axis.min(), vmax=time_axis.max())
             ax.add_collection(lc)
             
-            # 坐标轴计算 (保持不变)
+            # 坐标轴计算
             x_min, x_max = x.min(), x.max()
             y_min, y_max = y.min(), y.max()
             x_mid = 0.5 * (x_min + x_max)
@@ -218,30 +227,37 @@ class Api:
             ax.set_ylim(y_mid - half_span, y_mid + half_span)
             ax.set_box_aspect(1)
             
-            # --- 【修改】装饰逻辑 ---
+            # --- 装饰逻辑 ---
             
-            # 1. 标记点控制
+            # 1. 标记点
             if show_markers:
                 ax.plot(x[0], y[0], marker='o', color='#D9ECFF', markeredgecolor='gray', markersize=8, label='Start')
                 ax.plot(x[-1], y[-1], marker='*', color='#FFE89A', markeredgecolor='gray', markersize=12, label='End')
             
-            # 2. 标题控制
-            final_title = custom_title if custom_title.strip() else title
-            ax.set_title(final_title)
+            # 2. 标题 (新增控制)
+            if show_title:
+                final_title = custom_title if custom_title.strip() else title
+                ax.set_title(final_title)
             
-            ax.set_xlabel(f"X ({x_unit})")
-            ax.set_ylabel(f"Y ({y_unit})")
+            # 3. 坐标轴标签 (新增控制)
+            if show_axis_labels:
+                ax.set_xlabel(f"X ({x_unit})")
+                ax.set_ylabel(f"Y ({y_unit})")
             
-            ax.grid(True, linestyle='--', alpha=0.3)
+            # 4. 网格线 (新增控制)
+            if show_grid:
+                ax.grid(True, linestyle='--', alpha=0.3)
+            else:
+                ax.grid(False)
             
             cbar = fig.colorbar(lc, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label('Time (Frame)')
             
-            # 3. 图例控制
+            # 5. 图例
             if show_markers:
                 ax.legend(loc='upper right')
 
-            # --- 输出 (保持不变) ---
+            # --- 输出 ---
             if save_path:
                 fmt = 'svg'
                 if save_path.lower().endswith('.png'): fmt = 'png'
