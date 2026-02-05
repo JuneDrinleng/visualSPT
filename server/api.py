@@ -60,7 +60,7 @@ class Api:
             self.is_loading_libs = False
 
     def _ensure_libs(self):
-        """确保库已加载（如果用户手速太快，在预加载完成前点击了按钮，这里会进行同步等待）"""
+        """确保库已加载"""
         if self.libs_loaded:
             return
         
@@ -68,7 +68,7 @@ class Api:
         self.preload_libraries()
 
     def process_file_dialog(self):
-        self._ensure_libs() # 确保库可用
+        self._ensure_libs() 
 
         file_types = ('Data Files (*.csv;*.npz;*.npy)', 'All files (*.*)')
         result = self.window.create_file_dialog(
@@ -89,6 +89,7 @@ class Api:
                 self.trajectories = traj_data
                 self.current_file = os.path.basename(file_path)
                 
+                # 默认加载第一张图，使用默认参数
                 first_traj_img = ""
                 if traj_number > 0:
                     first_traj_img = self._plot_trajectory_by_index(0)
@@ -105,25 +106,68 @@ class Api:
             traceback.print_exc()
             return {"error": f"处理出错: {str(e)}"}
 
-    def change_trajectory(self, index):
+    def change_trajectory(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px"):
+        """
+        响应前端滑块或参数变化
+        """
         self._ensure_libs()
         try:
             index = int(index)
+            scale = float(scale)
             if 0 <= index < len(self.trajectories):
-                img = self._plot_trajectory_by_index(index)
+                img = self._plot_trajectory_by_index(index, scale, zero_start, x_unit, y_unit)
                 return {"image": img}
             else:
                 return {"error": "索引越界"}
         except Exception as e:
             return {"error": str(e)}
 
-    def _plot_trajectory_by_index(self, index):
+    def save_plot(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px"):
+        """
+        保存当前配置的图片
+        """
+        self._ensure_libs()
+        try:
+            # 1. 弹出保存对话框
+            save_path = self.window.create_file_dialog(
+                save_filename=f"traj_{index}.svg",
+                file_types=('SVG Image (*.svg)', 'PNG Image (*.png)', 'All files (*.*)')
+            )
+            
+            if not save_path:
+                return {"cancelled": True}
+            
+            save_path = save_path if isinstance(save_path, str) else save_path[0]
+
+            # 2. 生成图片数据 (不生成 base64，直接保存)
+            index = int(index)
+            scale = float(scale)
+            
+            traj = self.trajectories[index]
+            x, y = self._extract_xy(traj)
+            
+            # 复用绘图逻辑，但改为保存文件
+            msg = self._generate_plot(
+                x, y, 
+                title=f"Trajectory ID: {index}", 
+                scale=scale, 
+                zero_start=zero_start, 
+                x_unit=x_unit, 
+                y_unit=y_unit,
+                save_path=save_path # 传入路径触发保存模式
+            )
+            
+            return {"success": True, "path": save_path}
+
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px"):
         traj = self.trajectories[index]
         x, y = self._extract_xy(traj)
-        return self._generate_plot(x, y, title=f"Trajectory ID: {index}")
+        return self._generate_plot(x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit)
 
     def _extract_xy(self, traj):
-        # 使用 self.pd 和 self.np
         if isinstance(traj, self.pd.DataFrame):
             if 'POSITION_X' in traj.columns and 'POSITION_Y' in traj.columns:
                 return traj['POSITION_X'].values, traj['POSITION_Y'].values
@@ -140,7 +184,7 @@ class Api:
 
         return [], []
 
-    def _generate_plot(self, x, y, title='Trajectory Visualization'):
+    def _generate_plot(self, x, y, title='Trajectory Visualization', scale=1.0, zero_start=False, x_unit="px", y_unit="px", save_path=None):
         plt = self.plt
         np = self.np
         from matplotlib.collections import LineCollection
@@ -149,26 +193,35 @@ class Api:
         # 1. 清理旧图
         plt.close('all')
 
-        # 2. 数据有效性检查 (关键修复)
-        # 检查是否包含 NaN 或 Inf
+        # 2. 数据有效性检查
         if not np.isfinite(x).all() or not np.isfinite(y).all():
-            print(f"警告: 轨迹数据包含 NaN 或 Inf，尝试清洗数据...")
-            # 获取有效索引
             valid_mask = np.isfinite(x) & np.isfinite(y)
             x = x[valid_mask]
             y = y[valid_mask]
 
-        # 如果清洗后点太少，直接返回空
         if len(x) < 2:
-            print("错误: 有效轨迹点不足 2 个，无法绘图")
             return ""
+
+        # --- 数据变换逻辑 ---
+        # A. 起点归零
+        if zero_start:
+            x = x - x[0]
+            y = y - y[0]
+        
+        # B. 比例尺缩放
+        if scale != 1.0 and scale != 0:
+            x = x * scale
+            y = y * scale
 
         # 3. 构造绘图数据
         points = np.array([x, y]).T.reshape(-1, 1, 2)
         segments = np.concatenate([points[:-1], points[1:]], axis=1)
         time_axis = np.arange(len(x)) 
         
-        fig, ax = plt.subplots()
+        # 如果是保存模式，适当调大尺寸
+        figsize = (10, 8) if not save_path else (12, 10)
+        fig, ax = plt.subplots(figsize=figsize)
+        
         buf = io.BytesIO()
 
         try:
@@ -180,7 +233,7 @@ class Api:
             lc.set_clim(vmin=time_axis.min(), vmax=time_axis.max())
             ax.add_collection(lc)
             
-            # --- 坐标轴范围计算 (关键修复: 增加健壮性) ---
+            # --- 坐标轴范围计算 ---
             x_min, x_max = x.min(), x.max()
             y_min, y_max = y.min(), y.max()
             
@@ -191,42 +244,56 @@ class Api:
             span_y = y_max - y_min
             span = max(span_x, span_y)
             
-            # 防止 span 为 0 (即所有点都在同一个位置)
-            if span == 0:
-                span = 1.0 
-            
-            span *= 1.1 # 留白 10%
+            if span == 0: span = 1.0 
+            span *= 1.1 
             half_span = span / 2
             
-            # 再次检查计算结果是否有效
-            if np.isnan(half_span) or np.isinf(half_span):
-                half_span = 1.0
+            if np.isnan(half_span) or np.isinf(half_span): half_span = 1.0
 
             ax.set_xlim(x_mid - half_span, x_mid + half_span)
             ax.set_ylim(y_mid - half_span, y_mid + half_span)
             ax.set_box_aspect(1)
             
-            # # --- 装饰 ---
-            # ax.plot(x[0], y[0], marker='o', color='#D9ECFF', markeredgecolor='gray', markersize=8, label='Start')
-            # ax.plot(x[-1], y[-1], marker='*', color='#FFE89A', markeredgecolor='gray', markersize=12, label='End')
+            # --- 装饰 ---
+            # 起点终点标记
+            ax.plot(x[0], y[0], marker='o', color='#D9ECFF', markeredgecolor='gray', markersize=8, label='Start')
+            ax.plot(x[-1], y[-1], marker='*', color='#FFE89A', markeredgecolor='gray', markersize=12, label='End')
             
-            # ax.set_title(title)
+            ax.set_title(title)
+            
+            # 设置坐标轴标签
+            ax.set_xlabel(f"X ({x_unit})")
+            ax.set_ylabel(f"Y ({y_unit})")
+            
             ax.grid(True, linestyle='--', alpha=0.3)
             
             cbar = fig.colorbar(lc, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label('Time (Frame)')
-            # ax.legend(loc='upper right')
+            ax.legend(loc='upper right')
 
-            # 保存
-            fig.savefig(buf, format='svg', bbox_inches='tight')
-            buf.seek(0)
-            img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-            return "data:image/svg+xml;base64," + img_base64
+            # --- 输出 ---
+            if save_path:
+                # 保存文件模式
+                # 根据后缀判断格式
+                fmt = 'svg'
+                if save_path.lower().endswith('.png'):
+                    fmt = 'png'
+                elif save_path.lower().endswith('.pdf'):
+                    fmt = 'pdf'
+                
+                fig.savefig(save_path, format=fmt, bbox_inches='tight', dpi=300)
+                return "saved"
+            else:
+                # 预览模式 (SVG)
+                fig.savefig(buf, format='svg', bbox_inches='tight')
+                buf.seek(0)
+                img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                return "data:image/svg+xml;base64," + img_base64
 
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"绘图依然出错: {e}")
+            print(f"绘图出错: {e}")
             return ""
             
         finally:

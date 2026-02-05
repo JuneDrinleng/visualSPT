@@ -5,15 +5,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   navBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
+      // 移除所有激活状态
       navBtns.forEach((b) => b.classList.remove("active"));
       pages.forEach((p) => p.classList.remove("active"));
+
+      // 激活当前按钮
       btn.classList.add("active");
+
+      // 获取目标页面 ID (HTML中已添加 data-target)
       const targetId = btn.getAttribute("data-target");
-      document.getElementById(targetId).classList.add("active");
+      const targetPage = document.getElementById(targetId);
+      if (targetPage) {
+        targetPage.classList.add("active");
+      }
     });
   });
 
-  // --- 2. 核心逻辑 ---
+  // --- 2. 核心元素引用 (确保这些ID在HTML中存在) ---
   const uploadBtn = document.getElementById("uploadBtn");
   const filePathDisplay = document.getElementById("file-path-display");
   const plotImg = document.getElementById("plot-image");
@@ -21,24 +29,93 @@ document.addEventListener("DOMContentLoaded", () => {
   const errorMsg = document.getElementById("error-msg");
   const placeholder = document.getElementById("placeholder");
 
-  // 新增控件引用
+  // 滑块区域
   const controlPanel = document.getElementById("control-panel");
   const slider = document.getElementById("traj-slider");
-  const indexLbl = document.getElementById("traj-index-lbl");
-  const totalLbl = document.getElementById("total-traj-lbl");
+  const indexLbl = document.getElementById("traj-index-lbl"); // 当前索引数字
+  const totalLbl = document.getElementById("total-traj-lbl"); // 总数标签
 
+  // 右侧设置区域
+  const scaleInput = document.getElementById("scale-input");
+  const zeroStartSwitch = document.getElementById("zero-start-switch");
+  const xUnitInput = document.getElementById("x-unit-input");
+  const yUnitInput = document.getElementById("y-unit-input");
+  const saveBtn = document.getElementById("saveBtn");
+
+  // 状态变量
+  let isFileLoaded = false;
+
+  // --- 3. 辅助函数：获取当前设置参数 ---
+  function getPlotParams() {
+    return {
+      index: parseInt(slider.value) || 0,
+      scale: parseFloat(scaleInput.value) || 1.0,
+      zero_start: zeroStartSwitch.checked,
+      x_unit: xUnitInput.value || "px",
+      y_unit: yUnitInput.value || "px",
+    };
+  }
+
+  // --- 4. 辅助函数：刷新图表 ---
+  function updatePlot() {
+    if (!isFileLoaded) return;
+
+    const params = getPlotParams();
+    indexLbl.textContent = params.index; // 更新显示的数字
+
+    // 检查 pywebview 是否存在 (防止在普通浏览器打开报错)
+    if (window.pywebview) {
+      window.pywebview.api
+        .change_trajectory(
+          params.index,
+          params.scale,
+          params.zero_start,
+          params.x_unit,
+          params.y_unit,
+        )
+        .then((res) => {
+          if (res.image) {
+            plotImg.src = res.image; // 假设返回的是 base64 或 路径
+            errorMsg.style.display = "none";
+            plotImg.style.display = "block";
+          } else if (res.error) {
+            console.error(res.error);
+            errorMsg.textContent = res.error;
+            errorMsg.style.display = "block";
+          }
+        });
+    } else {
+      console.warn("Pywebview API not found (running in browser mode?)");
+    }
+  }
+
+  // --- 5. 事件监听：控件变化自动刷新 ---
+
+  // 滑块拖动时只更新数字，不请求后端（防止卡顿）
+  slider.addEventListener("input", () => {
+    indexLbl.textContent = slider.value;
+  });
+
+  // 滑块拖动结束（松手）时才请求后端
+  slider.addEventListener("change", updatePlot);
+
+  // 设置项变化
+  scaleInput.addEventListener("change", updatePlot);
+  zeroStartSwitch.addEventListener("change", updatePlot);
+  xUnitInput.addEventListener("change", updatePlot);
+  yUnitInput.addEventListener("change", updatePlot);
+
+  // --- 6. 上传逻辑 ---
   uploadBtn.addEventListener("click", () => {
-    // UI 状态重置
-    placeholder.style.display = "none";
-    plotImg.style.display = "none";
-    errorMsg.style.display = "none";
-    controlPanel.style.display = "none"; // 重新加载时先隐藏滑块
-
     if (!window.pywebview) {
       alert("请在 Pywebview 环境下运行！");
       return;
     }
 
+    // UI 重置
+    placeholder.style.display = "none";
+    plotImg.style.display = "none";
+    errorMsg.style.display = "none";
     loading.style.display = "block";
 
     window.pywebview.api
@@ -47,12 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loading.style.display = "none";
 
         if (res.cancelled) {
-          if (
-            placeholder.style.display === "none" &&
-            plotImg.style.display === "none"
-          ) {
-            placeholder.style.display = "flex"; // flex for centering
-          }
+          if (!isFileLoaded) placeholder.style.display = "flex"; // Flex布局保持居中
           return;
         }
 
@@ -60,18 +132,23 @@ document.addEventListener("DOMContentLoaded", () => {
           errorMsg.textContent = "错误: " + res.error;
           errorMsg.style.display = "block";
           filePathDisplay.textContent = "读取失败";
+          isFileLoaded = false;
         } else {
           // 成功加载
-          plotImg.src = res.image;
-          plotImg.style.display = "block";
+          isFileLoaded = true;
+          // 截取文件名
           filePathDisplay.textContent = res.file_path.split(/[/\\]/).pop();
-          // --- 设置滑块 ---
+
+          // 初始化滑块
           if (res.total_trajs > 0) {
-            controlPanel.style.display = "block";
+            controlPanel.style.display = "flex"; // 显示控制条
             slider.max = res.total_trajs - 1;
             slider.value = 0;
-            indexLbl.textContent = "0"; // 对应第1条，索引为0
+            indexLbl.textContent = "0";
             totalLbl.textContent = `/ 共 ${res.total_trajs} 条`;
+
+            // 显示第一张图 (带默认参数)
+            updatePlot();
           }
         }
       })
@@ -82,18 +159,38 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   });
 
-  // --- 3. 滑块拖动事件 ---
-  slider.addEventListener("input", (e) => {
-    const index = parseInt(e.target.value);
-    indexLbl.textContent = index; // 显示当前索引
+  // --- 7. 保存按钮逻辑 ---
+  saveBtn.addEventListener("click", () => {
+    if (!isFileLoaded) {
+      alert("请先加载数据！");
+      return;
+    }
 
-    // 为了防止拖动过快导致卡顿，可以加防抖(debounce)，这里简单处理直接调用
-    window.pywebview.api.change_trajectory(index).then((res) => {
-      if (res.image) {
-        plotImg.src = res.image;
-      } else if (res.error) {
-        console.error(res.error);
-      }
-    });
+    const params = getPlotParams();
+    // 按钮变更为“保存中...”
+    const originalText = saveBtn.innerHTML; // 使用 innerHTML 保留图标
+    saveBtn.innerHTML = "<span>⏳</span> 保存中...";
+    saveBtn.disabled = true;
+
+    if (window.pywebview) {
+      window.pywebview.api
+        .save_plot(
+          params.index,
+          params.scale,
+          params.zero_start,
+          params.x_unit,
+          params.y_unit,
+        )
+        .then((res) => {
+          saveBtn.innerHTML = originalText;
+          saveBtn.disabled = false;
+
+          if (res.success) {
+            alert("保存成功！\n路径: " + res.path);
+          } else if (res.error) {
+            alert("保存失败: " + res.error);
+          }
+        });
+    }
   });
 });

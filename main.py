@@ -30,9 +30,9 @@ if __name__ == '__main__':
         title='visualSPT',
         url=get_html_path(),
         js_api=api,
-        width=1000,
-        height=700,
-        min_size=(800, 800)
+        width=800,
+        height=600,
+        min_size=(800, 400)
     )
     
     api.set_window(window)

@@ -3,101 +3,199 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TrajViz</title>
+    <title>TrajViz Pro</title>
     <link rel="stylesheet" href="style.css" />
-    <style>
-      /* 新增滑块样式 */
-      .control-panel {
-        display: none; /* 默认隐藏，加载数据后显示 */
-        margin-bottom: 15px;
-        padding: 15px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-      }
-      .slider-container {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-      }
-      .slider-label {
-        font-weight: bold;
-        color: #2c3e50;
-        min-width: 120px;
-      }
-      input[type="range"] {
-        flex: 1;
-        cursor: pointer;
-      }
-    </style>
   </head>
   <body>
+    <!-- 侧边栏 -->
     <div class="sidebar">
-      <div class="logo">TrajViz v1.0</div>
-      <button class="nav-btn active" data-target="viz-page">
-        📍 轨迹可视化
-      </button>
-      <button class="nav-btn" data-target="stats-page">📊 数据统计</button>
-      <button class="nav-btn" data-target="settings-page">⚙️ 系统设置</button>
+      <div class="logo">TrajViz</div>
+      <nav>
+        <!-- 注意：这里加回了 data-target，去掉了 onclick -->
+        <button class="nav-btn active" data-target="page-viz">
+          <span>📍</span> 轨迹可视化
+        </button>
+        <button class="nav-btn" data-target="page-stats">
+          <span>📊</span> 数据统计
+        </button>
+        <button class="nav-btn" data-target="page-settings">
+          <span>⚙️</span> 系统设置
+        </button>
+      </nav>
     </div>
 
+    <!-- 主内容区 -->
     <div class="main-content">
-      <!-- 轨迹可视化页面 -->
-      <div id="viz-page" class="page active">
+      <!-- 页面 1: 可视化工作台 -->
+      <div id="page-viz" class="page active">
         <div class="card">
-          <h1>轨迹可视化</h1>
-          <!-- <p>点击下方按钮选择 CSV 或 TXT 文件</p> -->
-
-          <div class="upload-section">
-            <button id="uploadBtn" class="action-btn">📂 选择并分析文件</button>
-            <span id="file-path-display" style="margin-left: 10px; color: #666"
-              >未选择文件</span
-            >
-          </div>
-
-          <!-- 新增：控制面板（滑块） -->
-          <div id="control-panel" class="control-panel">
-            <div class="slider-container">
-              <span class="slider-label"
-                >轨迹 ID: <span id="traj-index-lbl">0</span></span
-              >
-              <input type="range" id="traj-slider" min="0" value="0" step="1" />
+          <div class="card-header">
+            <h1>轨迹分析工作台</h1>
+            <div class="upload-section">
+              <!-- ID 改为 file-path-display 以匹配 JS -->
               <span
-                id="total-traj-lbl"
-                style="color: #999; font-size: 0.9em"
-              ></span>
+                id="file-path-display"
+                style="color: #95a5a6; font-size: 0.85rem"
+                >未选择文件</span
+              >
+              <!-- ID 改为 uploadBtn 以匹配 JS -->
+              <button id="uploadBtn" class="action-btn">
+                <span>📂</span> 打开 CSV
+              </button>
             </div>
           </div>
 
-          <div id="plot-container">
-            <div id="placeholder" class="placeholder-box">
-              <!-- <div>
-                <div style="font-size: 3rem; margin-bottom: 10px">📉</div>
-                暂无数据<br />请点击按钮选择文件
-              </div> -->
+          <div class="viz-layout">
+            <!-- 左侧绘图区 -->
+            <div class="viz-left">
+              <div id="plot-container">
+                <div id="placeholder" class="placeholder-box">
+                  <div style="font-size: 3rem; opacity: 0.2">📉</div>
+                  <p>请点击右上角打开数据文件</p>
+                </div>
+                <div id="loading">🚀 正在渲染轨迹...</div>
+                <div id="error-msg" style="color: red; display: none"></div>
+                <img id="plot-image" alt="Trajectory Plot" />
+              </div>
+
+              <!-- 底部滑块 -->
+              <div id="control-panel" style="display: none">
+                <!-- 默认隐藏 -->
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    width: 100%;
+                  "
+                >
+                  <label style="font-weight: 600">ID:</label>
+                  <!-- ID 改为 traj-index-lbl -->
+                  <span
+                    id="traj-index-lbl"
+                    style="
+                      min-width: 20px;
+                      text-align: right;
+                      font-weight: bold;
+                      color: var(--active-color);
+                    "
+                    >0</span
+                  >
+                  <!-- ID 改为 total-traj-lbl -->
+                  <span
+                    id="total-traj-lbl"
+                    style="
+                      font-size: 0.8rem;
+                      color: #7f8c8d;
+                      margin-right: 10px;
+                    "
+                    >/ 0</span
+                  >
+
+                  <input
+                    type="range"
+                    id="traj-slider"
+                    min="0"
+                    max="100"
+                    value="0"
+                    style="flex: 1"
+                  />
+                </div>
+              </div>
             </div>
-            <div id="loading">正在处理...</div>
-            <div id="error-msg"></div>
-            <img id="plot-image" alt="Trajectory Plot" />
+
+            <!-- 右侧设置面板 -->
+            <div class="viz-right">
+              <div class="panel-title">绘图参数</div>
+
+              <!-- 比例尺 -->
+              <div class="setting-group">
+                <label class="setting-label">比例尺 (Scale)</label>
+                <div class="unit-row">
+                  <span style="font-size: 12px; color: #777">1px =</span>
+                  <!-- 添加 ID: scale-input -->
+                  <input
+                    type="number"
+                    id="scale-input"
+                    class="form-input"
+                    value="1"
+                    step="0.1"
+                    style="text-align: center"
+                  />
+                  <span style="font-size: 12px; color: #777">unit</span>
+                </div>
+              </div>
+
+              <!-- 起点归零 -->
+              <div
+                class="setting-group"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <label class="setting-label" style="margin: 0"
+                  >起点归零 (0,0)</label
+                >
+                <label class="switch">
+                  <!-- 添加 ID: zero-start-switch -->
+                  <input type="checkbox" id="zero-start-switch" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <!-- 坐标轴单位 -->
+              <div class="setting-group">
+                <label class="setting-label">坐标轴单位 (X / Y)</label>
+                <div class="unit-row">
+                  <!-- 添加 ID: x-unit-input, y-unit-input -->
+                  <input
+                    type="text"
+                    id="x-unit-input"
+                    class="form-input"
+                    placeholder="X (m)"
+                    value="m"
+                  />
+                  <span class="unit-separator">/</span>
+                  <input
+                    type="text"
+                    id="y-unit-input"
+                    class="form-input"
+                    placeholder="Y (m)"
+                    value="m"
+                  />
+                </div>
+              </div>
+
+              <!-- 底部保存按钮 -->
+              <div class="action-area">
+                <!-- ID 改为 saveBtn 以匹配 JS -->
+                <button id="saveBtn" class="btn-save">
+                  <span>💾</span> 保存当前视图
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 其他页面占位 -->
-      <div id="stats-page" class="page">
-        <div class="card">
-          <h1>数据统计</h1>
-          <p>统计模块开发中...</p>
+      <div id="page-stats" class="page">
+        <div class="card" style="padding: 40px; text-align: center">
+          <h2>数据统计</h2>
+          <p style="color: #95a5a6">开发中...</p>
         </div>
       </div>
-      <div id="settings-page" class="page">
-        <div class="card">
-          <h1>系统设置</h1>
-          <p>设置模块开发中...</p>
+
+      <div id="page-settings" class="page">
+        <div class="card" style="padding: 40px; text-align: center">
+          <h2>系统设置</h2>
+          <p style="color: #95a5a6">开发中...</p>
         </div>
       </div>
     </div>
 
-    <script src="../script.js"></script>
+    <!-- 引用您的 JS 文件 -->
+    <script src="script.js"></script>
   </body>
 </html>
