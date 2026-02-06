@@ -5,6 +5,7 @@ pack the code
 
 ```
 pyinstaller -F -w --name "visualSPT" --icon "logo.ico" ^
+  --version-file "version_info.txt" ^
   --hidden-import=server.tool.read_traj_file ^
   --hidden-import=server.tool.plot_traj ^
   --hidden-import=server.api.io ^

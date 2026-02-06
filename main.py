@@ -120,47 +120,54 @@ def get_html_path():
     """get HTML file's absolute path"""
     return os.path.join(_BASE_DIR, 'ui', 'index.html')
 
-def _apply_rounded_corners(hwnd, radius=16):
-    """通过 Win32 API 将窗口裁剪为圆角矩形"""
+def _enable_dwm_shadow(hwnd):
+    """通过 DWM API 为窗口添加系统阴影"""
     try:
-        gdi32 = ctypes.windll.gdi32
-        rect = wintypes.RECT()
-        user32.GetWindowRect(hwnd, ctypes.byref(rect))
-        w = rect.right - rect.left
-        h = rect.bottom - rect.top
-        if w > 0 and h > 0:
-            hrgn = gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, radius, radius)
-            if hrgn:
-                user32.SetWindowRgn(hwnd, hrgn, True)
-    except Exception as e:
-        _tlog(f"[RoundCorner] error: {e}")
+        dwmapi = ctypes.windll.dwmapi
 
-_corner_radius = 16
+        # DwmSetWindowAttribute(DWMWA_NCRENDERING_POLICY=2, DWMNCRP_ENABLED=2)
+        # 强制启用非客户区 DWM 渲染，这是阴影的前提
+        policy = ctypes.c_int(2)
+        dwmapi.DwmSetWindowAttribute(hwnd, 2, ctypes.byref(policy), ctypes.sizeof(policy))
+
+        # DwmExtendFrameIntoClientArea 扩展框架到客户区，触发 DWM 阴影
+        class MARGINS(ctypes.Structure):
+            _fields_ = [
+                ('cxLeftWidth', ctypes.c_int),
+                ('cxRightWidth', ctypes.c_int),
+                ('cyTopHeight', ctypes.c_int),
+                ('cyBottomHeight', ctypes.c_int),
+            ]
+        m = MARGINS(1, 1, 1, 1)
+        dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
+
+        # Windows 11 (build 22000+)：启用系统原生圆角
+        # DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2
+        try:
+            corner_pref = ctypes.c_int(2)
+            dwmapi.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(corner_pref), ctypes.sizeof(corner_pref))
+        except Exception:
+            pass  # Windows 10 不支持，忽略
+
+    except Exception as e:
+        _tlog(f"[DWMShadow] error: {e}")
 
 def _subclass_window(hwnd):
     """子类化窗口过程，实现：
-    1. WM_NCCALCSIZE → 返回0，隐藏标题栏/边框 + 重新应用圆角
+    1. WM_NCCALCSIZE → 返回0，隐藏标题栏/边框（保持无边框外观）
     2. WM_ERASEBKGND → 返回1，阻止白色背景绘制（消除恢复时闪白）
     """
     global _original_wndproc, _wndproc_ref
 
     WM_NCCALCSIZE = 0x0083
     WM_ERASEBKGND = 0x0014
-    WM_SIZE = 0x0005
     GWLP_WNDPROC = -4
 
     def _custom_wndproc(h, msg, wparam, lparam):
         if msg == WM_NCCALCSIZE and wparam:
-            # 返回 0 使非客户区大小为零，保持无边框但保留动画
             return 0
         if msg == WM_ERASEBKGND:
-            # 阻止背景擦除，防止恢复时闪白
             return 1
-        if msg == WM_SIZE:
-            # 窗口大小变化（包括从最小化恢复）时重新应用圆角
-            result = _CallWindowProcW(_original_wndproc, h, msg, wparam, lparam)
-            _apply_rounded_corners(h, _corner_radius)
-            return result
         return _CallWindowProcW(_original_wndproc, h, msg, wparam, lparam)
 
     _wndproc_ref = WNDPROC(_custom_wndproc)
@@ -169,28 +176,24 @@ def _subclass_window(hwnd):
 def on_start_background_loading():
     if _IS_WINDOWS:
         try:
-            time.sleep(0.3)  # 等待窗口完全创建
+            time.sleep(0.3)  
             title = getattr(window, 'title', 'visualSPT')
             hwnd = user32.FindWindowW(None, title)
             if hwnd:
-                # 添加 WS_CAPTION | WS_MINIMIZEBOX 启用最小化/还原动画和任务栏交互
                 GWL_STYLE = -16
                 WS_CAPTION = 0x00C00000
                 WS_MINIMIZEBOX = 0x00020000
                 style = _GetWindowLongPtr(hwnd, GWL_STYLE)
                 new_style = style | WS_CAPTION | WS_MINIMIZEBOX
                 _SetWindowLongPtr(hwnd, GWL_STYLE, new_style)
-                # 子类化窗口过程：隐藏标题栏 + 防止闪白 + 自动维护圆角
                 _subclass_window(hwnd)
-                # 通知系统样式已变更
                 SWP_FRAMECHANGED = 0x0020
                 SWP_NOMOVE = 0x0002
                 SWP_NOSIZE = 0x0001
                 SWP_NOZORDER = 0x0004
                 user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0,
                                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER)
-                # 初始应用圆角
-                _apply_rounded_corners(hwnd, _corner_radius)
+                _enable_dwm_shadow(hwnd)
         except Exception as e:
             _tlog(f"[WindowSetup] error: {e}")
     api.preload_libraries()
@@ -204,14 +207,12 @@ def _create_tray(window, quit_event):
         return
 
     def _make_image():
-        # 加载项目 logo 作为托盘图标
         try:
             logo_path = os.path.join(_BASE_DIR, 'assets', 'logo', 'logo_transparent.png')
             img = Image.open(logo_path)
             img = img.resize((64, 64), Image.LANCZOS)
             return img
         except Exception:
-            # 回退：绘制简易图标
             img = Image.new('RGBA', (64, 64), (52, 152, 219, 255))
             d = ImageDraw.Draw(img)
             d.rectangle((12, 12, 52, 52), fill=(255, 255, 255, 255))
@@ -329,6 +330,20 @@ def _create_tray(window, quit_event):
         pass
 
 if __name__ == '__main__':
+    # 防止程序多开：使用 Windows 命名互斥体
+    _mutex = None
+    if _IS_WINDOWS:
+        try:
+            kernel32 = ctypes.windll.kernel32
+            _mutex = kernel32.CreateMutexW(None, True, 'visualSPT_SingleInstance_Mutex')
+            ERROR_ALREADY_EXISTS = 183
+            if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
+                # 已有实例运行，尝试将其窗口激活后退出
+                _bring_window_to_front_by_title('visualSPT')
+                sys.exit(0)
+        except Exception:
+            pass
+
     api = Api()
 
     window = webview.create_window(
