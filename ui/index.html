@@ -7,26 +7,37 @@
     <link rel="stylesheet" href="css/base.css" />
   </head>
   <body>
-    <div class="sidebar">
-      <div class="logo">visualSPT</div>
-      <nav>
-        <button class="nav-btn active" data-target="page-viz">
-          <span>🎨</span> 静态轨迹图
-        </button>
-        <button class="nav-btn" data-target="page-activate-traj">
-          <span>🎬</span> 动态轨迹图
-        </button>
-        <button class="nav-btn" data-target="page-tamsd">
-          <span>💻</span> TAMSD计算
-        </button>
-        <button class="nav-btn" data-target="page-eamsd">
-          <span>📠</span> EAMSD计算
-        </button>
-      </nav>
+    <div class="titlebar">
+      <div class="titlebar-left">
+        <div class="app-title">visualSPT</div>
+      </div>
+      <div class="titlebar-right">
+        <button id="min-btn" class="title-btn">—</button>
+        <button id="close-btn" class="title-btn close">✕</button>
+      </div>
     </div>
-    <!-- 主内容容器：通过 fetch 动态加载 pages 下的片段 -->
-    <div class="main-content">
-      <div id="app"></div>
+    <div class="content-row">
+      <div class="sidebar">
+        <div class="logo">visualSPT</div>
+        <nav>
+          <button class="nav-btn active" data-target="page-viz">
+            <span>🎨</span> 静态轨迹图
+          </button>
+          <button class="nav-btn" data-target="page-activate-traj">
+            <span>🎬</span> 动态轨迹图
+          </button>
+          <button class="nav-btn" data-target="page-tamsd">
+            <span>💻</span> TAMSD计算
+          </button>
+          <button class="nav-btn" data-target="page-eamsd">
+            <span>📠</span> EAMSD计算
+          </button>
+        </nav>
+      </div>
+      <!-- 主内容容器：通过 fetch 动态加载 pages 下的片段 -->
+      <div class="main-content">
+        <div id="app"></div>
+      </div>
     </div>
 
     <script src="script.js"></script>

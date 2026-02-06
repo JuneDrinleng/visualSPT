@@ -27,7 +27,11 @@
         <img id="plot-image" alt="Trajectory Plot" />
       </div>
 
-      <div id="control-panel" style="display: none">
+      <div
+        id="control-panel"
+        style="display: none"
+        onmousedown="event.stopPropagation()"
+      >
         <label style="font-weight: 600; color: #555">ID:</label>
         <span
           id="traj-index-lbl"

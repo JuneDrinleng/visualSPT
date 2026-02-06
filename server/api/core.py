@@ -23,6 +23,7 @@ class Api:
 
         self.is_loading_libs = False
         self.libs_loaded = False
+        self._always_on_top = False
 
     def set_window(self, window):
         self._window = window
@@ -157,6 +158,43 @@ class Api:
             import traceback
             traceback.print_exc()
             return {"error": str(e)}
+
+    # Window control helpers used by frontend custom title bar
+    def hide_window(self):
+        try:
+            if self._window:
+                self._window.hide()
+                return {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+        return {"error": "no window"}
+
+    def minimize_window(self):
+        try:
+            if self._window:
+                self._window.minimize()
+                return {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+        return {"error": "no window"}
+
+    def maximize_window(self):
+        try:
+            if self._window:
+                self._window.maximize()
+                return {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+        return {"error": "no window"}
+
+    def restore_window(self):
+        try:
+            if self._window:
+                self._window.restore()
+                return {"success": True}
+        except Exception as e:
+            return {"error": str(e)}
+        return {"error": "no window"}
 
     def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         traj = self.trajectories[index]

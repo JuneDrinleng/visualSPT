@@ -2,6 +2,24 @@
 document.addEventListener("DOMContentLoaded", () => {
   const navBtns = document.querySelectorAll(".nav-btn");
 
+  // Custom titlebar buttons (shell-level)
+  const minBtn = document.getElementById("min-btn");
+  const closeBtn = document.getElementById("close-btn");
+
+  if (minBtn) {
+    minBtn.addEventListener("click", () => {
+      if (window.pywebview) window.pywebview.api.minimize_window();
+      else window.minimize && window.minimize();
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      // hide instead of close
+      if (window.pywebview) window.pywebview.api.hide_window();
+      else window.close && window.close();
+    });
+  }
+
   function setActiveButton(targetKey) {
     navBtns.forEach((b) => {
       const t = b.getAttribute("data-target");
