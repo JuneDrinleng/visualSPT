@@ -21,7 +21,7 @@ def extract_xy(traj, pd, np):
     return [], []
 
 
-def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True, show_colorbar=True, show_ticks=True, show_border=True):
     from matplotlib.collections import LineCollection
     from matplotlib.colors import LinearSegmentedColormap
 
@@ -94,8 +94,16 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
         else:
             ax.grid(False)
 
-        cbar = fig.colorbar(lc, ax=ax, fraction=0.046, pad=0.04)
-        cbar.set_label('Time (Frame)')
+        if show_colorbar:
+            cbar = fig.colorbar(lc, ax=ax, fraction=0.046, pad=0.04)
+            cbar.set_label('Time (Frame)')
+
+        if not show_ticks:
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        if not show_border:
+            ax.axis('off')
 
         if show_markers:
             ax.legend(loc='upper right')
@@ -179,8 +187,8 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
             fig, ax = plt.subplots(figsize=(5, 5), dpi=100)
             ax_bar = None
 
-        ax.set_xlim(-limit, limit)
-        ax.set_ylim(-limit, limit)
+        ax.set_xlim(-limit * 1.05, limit * 1.05)
+        ax.set_ylim(-limit * 1.05, limit * 1.05)
         ax.set_aspect('equal')
         ax.axis('off')
         if show_grid:
@@ -188,14 +196,26 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
             ax.axvline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
 
         if show_axis_labels:
-            fmt = f'{limit:.2f}'
-            label_style = dict(fontsize=7, color='gray', alpha=0.6, ha='center', va='center')
-            # X axis labels (left / right)
-            ax.text(limit * 0.95, 0, f'{fmt} {x_unit}', ha='right', va='bottom', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
-            ax.text(-limit * 0.95, 0, f'-{fmt} {x_unit}', ha='left', va='bottom', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
-            # Y axis labels (top / bottom)
-            ax.text(0, limit * 0.95, f'{fmt} {y_unit}', ha='left', va='top', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
-            ax.text(0, -limit * 0.95, f'-{fmt} {y_unit}', ha='left', va='bottom', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
+            tick_val = limit
+            fmt_pos = f'{tick_val:.2f}'
+            fmt_neg = f'-{tick_val:.2f}'
+            label_style = dict(fontsize=7, color='gray', alpha=0.6)
+            offset = limit * 0.04
+
+            tick_len = limit * 0.025
+            tick_style = dict(color='gray', alpha=0.8, lw=1.5)
+
+            # X axis tick marks and labels at ±limit
+            ax.plot([limit, limit], [-tick_len, tick_len], **tick_style)
+            ax.plot([-limit, -limit], [-tick_len, tick_len], **tick_style)
+            ax.text(limit, -offset, f'{fmt_pos} {x_unit}', ha='center', va='top', **label_style)
+            ax.text(-limit, -offset, f'{fmt_neg} {x_unit}', ha='center', va='top', **label_style)
+
+            # Y axis tick marks and labels at ±limit
+            ax.plot([-tick_len, tick_len], [limit, limit], **tick_style)
+            ax.plot([-tick_len, tick_len], [-limit, -limit], **tick_style)
+            ax.text(-offset, limit, f'{fmt_pos} {y_unit}', ha='right', va='center', **label_style)
+            ax.text(-offset, -limit, f'{fmt_neg} {y_unit}', ha='right', va='center', **label_style)
 
         particle, = ax.plot([], [], 'o', color='#ef4444', markeredgecolor='white', markeredgewidth=1.5, markersize=8, zorder=10)
         lc = LineCollection([], cmap='coolwarm', linewidths=3, capstyle='round', norm=plt.Normalize(0, 1))

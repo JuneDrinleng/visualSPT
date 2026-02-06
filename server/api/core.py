@@ -99,13 +99,13 @@ class Api:
             traceback.print_exc()
             return {"error": f"Processing error: {str(e)}"}
 
-    def change_trajectory(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+    def change_trajectory(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True, show_colorbar=True, show_ticks=True, show_border=True):
         self._ensure_libs()
         try:
             index = int(index)
             scale = float(scale)
             if 0 <= index < len(self.trajectories):
-                img = self._plot_trajectory_by_index(index, scale, zero_start, x_unit, y_unit, custom_title, show_markers, show_title, show_axis_labels, show_grid)
+                img = self._plot_trajectory_by_index(index, scale, zero_start, x_unit, y_unit, custom_title, show_markers, show_title, show_axis_labels, show_grid, show_colorbar, show_ticks, show_border)
                 return {"image": img}
             else:
                 return {"error": "Index out of range"}
@@ -156,6 +156,9 @@ class Api:
             show_title = options.get('show_title', True)
             show_axis_labels = options.get('show_axis_labels', True)
             show_grid = options.get('show_grid', True)
+            show_colorbar = options.get('show_colorbar', True)
+            show_ticks = options.get('show_ticks', True)
+            show_border = options.get('show_border', True)
             traj = self.trajectories[index]
             x, y = api_plot.extract_xy(traj, self.pd, self.np)
 
@@ -171,7 +174,10 @@ class Api:
                 show_markers=show_markers,
                 show_title=show_title,
                 show_axis_labels=show_axis_labels,
-                show_grid=show_grid
+                show_grid=show_grid,
+                show_colorbar=show_colorbar,
+                show_ticks=show_ticks,
+                show_border=show_border
             )
 
             return {"success": True, "path": save_path}
@@ -242,10 +248,10 @@ class Api:
             return {"error": str(e)}
         return {"error": "no window"}
 
-    def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+    def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True, show_colorbar=True, show_ticks=True, show_border=True):
         traj = self.trajectories[index]
         x, y = api_plot.extract_xy(traj, self.pd, self.np)
-        return api_plot.generate_plot(self.plt, self.np, x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)
+        return api_plot.generate_plot(self.plt, self.np, x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid, show_colorbar=show_colorbar, show_ticks=show_ticks, show_border=show_border)
 
     def _plot_activation_by_index(self, index, scale=1.0, fps=20, trail_len=0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_timebar=True, show_title=True, show_axis_labels=True, show_grid=True):
         traj = self.trajectories[index]

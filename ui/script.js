@@ -124,6 +124,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const showTitleSwitch = root.querySelector("#show-title-switch");
     const showAxisLabelsSwitch = root.querySelector("#show-axis-labels-switch");
     const showGridSwitch = root.querySelector("#show-grid-switch");
+    const showColorbarSwitch = root.querySelector("#show-colorbar-switch");
+    const showTicksSwitch = root.querySelector("#show-ticks-switch");
+    const showBorderSwitch = root.querySelector("#show-border-switch");
     const saveBtn = root.querySelector("#saveBtn");
 
     let isFileLoaded = false;
@@ -144,6 +147,9 @@ document.addEventListener("DOMContentLoaded", () => {
           ? showAxisLabelsSwitch.checked
           : true,
         show_grid: showGridSwitch ? showGridSwitch.checked : true,
+        show_colorbar: showColorbarSwitch ? showColorbarSwitch.checked : true,
+        show_ticks: showTicksSwitch ? showTicksSwitch.checked : true,
+        show_border: showBorderSwitch ? showBorderSwitch.checked : true,
       };
     }
 
@@ -168,6 +174,9 @@ document.addEventListener("DOMContentLoaded", () => {
             params.show_title,
             params.show_axis_labels,
             params.show_grid,
+            params.show_colorbar,
+            params.show_ticks,
+            params.show_border,
           )
           .then((res) => {
             loading.style.display = "none";
@@ -204,6 +213,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (showAxisLabelsSwitch)
       showAxisLabelsSwitch.addEventListener("change", updatePlot);
     if (showGridSwitch) showGridSwitch.addEventListener("change", updatePlot);
+    if (showColorbarSwitch)
+      showColorbarSwitch.addEventListener("change", updatePlot);
+    if (showTicksSwitch) showTicksSwitch.addEventListener("change", updatePlot);
+    if (showBorderSwitch)
+      showBorderSwitch.addEventListener("change", updatePlot);
 
     if (uploadBtn)
       uploadBtn.addEventListener("click", () => {
