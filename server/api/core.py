@@ -32,6 +32,17 @@ class Api:
     def set_window(self, window):
         self._window = window
 
+    def window_show(self):
+        """显示窗口 (在前端准备就绪后调用)"""
+        try:
+            if self._window:
+                self._window.show()
+                print("[GUI] Window showed from frontend ready signal")
+            return {"ok": True}
+        except Exception as e:
+            print(f"[GUI] Error showing window: {e}")
+            return {"error": str(e)}
+
     def preload_libraries(self):
         if self.libs_loaded or self.is_loading_libs:
             return
@@ -54,15 +65,8 @@ class Api:
             self.read_npy_traj = read_npy_traj
             self.read_npz_traj = read_npz_traj
 
-            # quick headless check
-            try:
-                fig = plt.figure()
-                ax = fig.add_subplot(111)
-                ax.plot([0, 1], [0, 1])
-                fig.canvas.draw()
-                plt.close(fig)
-            except Exception:
-                pass
+            # 跳过 matplotlib 测试绘图，加速启动
+            # matplotlib 将在首次使用时初始化，避免阻塞 UI 加载
 
             self.libs_loaded = True
             print("[System] Libraries loaded, system is ready.")

@@ -173,10 +173,11 @@ def _subclass_window(hwnd):
     _wndproc_ref = WNDPROC(_custom_wndproc)
     _original_wndproc = _SetWindowLongPtr(hwnd, GWLP_WNDPROC, ctypes.cast(_wndproc_ref, ctypes.c_void_p).value)
 
-def on_start_background_loading():
+def _setup_window_async():
+    """设置窗口样式和阴影 (Windows 专用)"""
     if _IS_WINDOWS:
         try:
-            time.sleep(0.3)  
+            time.sleep(0.1)  # 减少延迟：允许窗口完全初始化
             title = getattr(window, 'title', 'visualSPT')
             hwnd = user32.FindWindowW(None, title)
             if hwnd:
@@ -196,10 +197,27 @@ def on_start_background_loading():
                 _enable_dwm_shadow(hwnd)
         except Exception as e:
             _tlog(f"[WindowSetup] error: {e}")
-    api.preload_libraries()
-    time.sleep(0.5)
-    if window:
-        window.show()
+
+def _preload_libraries_async():
+    """异步预加载库，不阻塞主线程"""
+    try:
+        api.preload_libraries()
+        print("[System] Background library loading completed")
+    except Exception as e:
+        print(f"[System] Background library loading error: {e}")
+
+def on_start_background_loading():
+    """主线程启动函数：设置窗口，库在后台异步加载"""
+    # 优先级 1: 窗口设置 (立即执行，快速)
+    _setup_window_async()
+    
+    # 优先级 2: 异步加载库 (不阻塞 UI)
+    # 窗口显示由前端 JavaScript 控制，当加载指示器显示时调用
+    try:
+        lib_thread = threading.Thread(target=_preload_libraries_async, daemon=True)
+        lib_thread.start()
+    except Exception as e:
+        print(f"[System] Error starting library loading thread: {e}")
 
 
 def _create_tray(window, quit_event):

@@ -1,5 +1,60 @@
 // Simple page loader + per-page initializers
 document.addEventListener("DOMContentLoaded", () => {
+  // 显示 window-frame（移除 display: none）
+  var windowFrame = document.getElementById("windowFrame");
+  if (windowFrame) {
+    windowFrame.style.display = "";
+  }
+
+  // 移除预加载指示器（不再需要）
+  var preloader = document.getElementById("preloadSpinner");
+  if (preloader) {
+    preloader.remove();
+  }
+
+  // 再次确保窗口显示
+  if (window.pywebview && window.pywebview.api) {
+    try {
+      window.pywebview.api.window_show();
+      console.log("[DOMContentLoaded] Window show triggered");
+    } catch (e) {
+      console.log("[DOMContentLoaded] window_show error:", e);
+    }
+  }
+
+  // 库加载完成检测：隐藏加载指示器
+  // 关键改进：加入 2 秒超时，无论如何都要显示 UI
+  function hideLoadingWhenReady() {
+    let attempts = 0;
+    const maxLibWaitTime = 20; // 2 秒超时
+
+    const checkLibs = setInterval(() => {
+      const isReady =
+        window.pywebview &&
+        window.pywebview.api &&
+        window.pywebview.api.libs_loaded;
+
+      if (isReady || attempts >= maxLibWaitTime) {
+        // 库已加载 OR 超时已到，隐藏加载指示器
+        clearInterval(checkLibs);
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        if (loadingOverlay) {
+          loadingOverlay.classList.add("hidden");
+          setTimeout(() => {
+            loadingOverlay.remove();
+          }, 300);
+        }
+
+        const status = isReady ? "Library ready" : "Timeout reached";
+        console.log("[UI] " + status + ", hide loading overlay");
+        return;
+      }
+
+      attempts++;
+    }, 100);
+  }
+  hideLoadingWhenReady();
+
   const navBtns = document.querySelectorAll(".nav-btn");
 
   // Custom titlebar buttons (shell-level)
