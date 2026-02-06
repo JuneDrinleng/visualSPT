@@ -94,7 +94,35 @@ def get_html_path():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, 'ui', 'index.html')
 
+def _apply_rounded_corners(hwnd, width, height, radius=12):
+    """通过 Win32 API 将窗口裁剪为圆角矩形，彻底消除白色直角"""
+    try:
+        gdi32 = ctypes.windll.gdi32
+        # 获取 DPI 缩放后的实际窗口尺寸
+        rect = wintypes.RECT()
+        user32.GetClientRect(hwnd, ctypes.byref(rect))
+        w = rect.right
+        h = rect.bottom
+        if w == 0 or h == 0:
+            w, h = width, height
+        # 创建圆角矩形区域
+        hrgn = gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, radius, radius)
+        if hrgn:
+            user32.SetWindowRgn(hwnd, hrgn, True)
+    except Exception as e:
+        _tlog(f"[RoundCorner] error: {e}")
+
 def on_start_background_loading():
+    # 通过 Win32 Region 实现真正的圆角窗口
+    if _IS_WINDOWS:
+        try:
+            time.sleep(0.3)  # 等待窗口完全创建
+            title = getattr(window, 'title', 'visualSPT')
+            hwnd = user32.FindWindowW(None, title)
+            if hwnd:
+                _apply_rounded_corners(hwnd, 800, 610, radius=16)
+        except Exception as e:
+            _tlog(f"[RoundCorner] apply error: {e}")
     api.preload_libraries()
     time.sleep(0.5)
     if window:
