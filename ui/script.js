@@ -28,7 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  let _currentPage = null;
+
   async function loadPage(key, pushState = true) {
+    if (key === _currentPage) return;
     const app = document.getElementById("app");
     try {
       const res = await fetch(`pages/${key}.html`);
@@ -56,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // re-set innerHTML after extracting links to avoid duplicate tags
       app.innerHTML = html.replace(/<link[^>]+>/gi, "");
       setActiveButton(key);
+      _currentPage = key;
       if (pushState) history.pushState({ page: key }, "", `#${key}`);
       // call page initializer if exists
       const initName = `init_${key.replace(/-/g, "_")}`;
