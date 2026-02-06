@@ -120,3 +120,113 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
     finally:
         plt.close(fig)
         buf.close()
+
+
+def generate_activation_plot(plt, np, x, y, title='Activation Visualization', scale=1.0, fps=20, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+    """A variant of trajectory plot suitable for dynamic/activation visualization.
+    This renders the trajectory as colored scatter points with a fading trail.
+    """
+    plt.close('all')
+
+    if not np.isfinite(x).all() or not np.isfinite(y).all():
+        valid_mask = np.isfinite(x) & np.isfinite(y)
+        x = x[valid_mask]
+        y = y[valid_mask]
+
+    if len(x) < 2:
+        return ""
+
+    if zero_start:
+        x = x - x[0]
+        y = y - y[0]
+    if scale != 1.0 and scale != 0:
+        x = x * scale
+        y = y * scale
+
+    # Implement dynamic-style plotting similar to plot_traj_dynamic: produce a GIF
+    try:
+        from matplotlib.collections import LineCollection
+        import matplotlib.animation as animation
+
+        # trail length and fps defaults
+        L = len(x)
+        trail_len = max(1, L // 2)
+        try:
+            fps = int(fps)
+        except Exception:
+            fps = 20
+
+        # figure setup: center around origin similar to attachment
+        max_abs_x = np.max(np.abs(x))
+        max_abs_y = np.max(np.abs(y))
+        limit = max(max_abs_x, max_abs_y) * 1.1
+
+        fig, ax = plt.subplots(figsize=(5, 5), dpi=100)
+        ax.set_xlim(-limit, limit)
+        ax.set_ylim(-limit, limit)
+        ax.set_aspect('equal')
+        ax.axis('off')
+        ax.axhline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
+        ax.axvline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
+
+        particle, = ax.plot([], [], 'o', color='#ef4444', markeredgecolor='white', markeredgewidth=1.5, markersize=8, zorder=10)
+        lc = LineCollection([], cmap='coolwarm', linewidths=3, capstyle='round', norm=plt.Normalize(0, 1))
+        ax.add_collection(lc)
+
+        def update(frame):
+            current_x = x[frame]
+            current_y = y[frame]
+            particle.set_data([current_x], [current_y])
+
+            start = max(0, frame - trail_len)
+            end = frame + 1
+            if end - start > 1:
+                xs = x[start:end]
+                ys = y[start:end]
+                points = np.array([xs, ys]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                lc.set_segments(segments)
+                color_array = np.linspace(0, 1, len(segments))
+                lc.set_array(color_array)
+                lc.set_clim(0, 1)
+            else:
+                lc.set_segments([])
+            return particle, lc
+
+        ani = animation.FuncAnimation(fig, update, frames=range(L), interval=1000 / fps, blit=True)
+
+        # if a save path is provided, save to it; otherwise save to a temporary GIF and return data URL
+        if save_path:
+            try:
+                ani.save(save_path, writer='pillow', fps=fps)
+                return "saved"
+            except Exception:
+                return ""
+        else:
+            import tempfile, os
+            tmp = None
+            try:
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.gif')
+                tmp.close()
+                ani.save(tmp.name, writer='pillow', fps=fps)
+                with open(tmp.name, 'rb') as f:
+                    data = f.read()
+                b64 = base64.b64encode(data).decode('utf-8')
+                return 'data:image/gif;base64,' + b64
+            except Exception:
+                return ""
+            finally:
+                try:
+                    if tmp is not None:
+                        os.unlink(tmp.name)
+                except Exception:
+                    pass
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"绘图出错 (activation): {e}")
+        try:
+            plt.close(fig)
+        except Exception:
+            pass
+        return ""
