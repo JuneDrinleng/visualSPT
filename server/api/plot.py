@@ -187,6 +187,16 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
             ax.axhline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
             ax.axvline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
 
+        if show_axis_labels:
+            fmt = f'{limit:.2f}'
+            label_style = dict(fontsize=7, color='gray', alpha=0.6, ha='center', va='center')
+            # X axis labels (left / right)
+            ax.text(limit * 0.95, 0, f'{fmt} {x_unit}', ha='right', va='bottom', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
+            ax.text(-limit * 0.95, 0, f'-{fmt} {x_unit}', ha='left', va='bottom', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
+            # Y axis labels (top / bottom)
+            ax.text(0, limit * 0.95, f'{fmt} {y_unit}', ha='left', va='top', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
+            ax.text(0, -limit * 0.95, f'-{fmt} {y_unit}', ha='left', va='bottom', **{k: v for k, v in label_style.items() if k not in ('ha', 'va')})
+
         particle, = ax.plot([], [], 'o', color='#ef4444', markeredgecolor='white', markeredgewidth=1.5, markersize=8, zorder=10)
         lc = LineCollection([], cmap='coolwarm', linewidths=3, capstyle='round', norm=plt.Normalize(0, 1))
         ax.add_collection(lc)

@@ -65,37 +65,22 @@
     <div class="viz-right">
       <div class="panel-title">Plot Parameters</div>
       <div class="setting-group">
-        <label class="setting-label">Scale</label>
+        <label class="setting-label">Scale / Unit</label>
         <div class="unit-row">
-          <span style="font-size: 12px; color: #777">1px =</span>
           <input
             type="number"
             id="scale-input"
             class="form-input"
             value="1"
             step="0.1"
-            style="text-align: center"
+            style="text-align: center; flex: 1"
           />
-        </div>
-      </div>
-
-      <div class="setting-group">
-        <label class="setting-label">Axis Unit (X / Y)</label>
-        <div class="unit-row">
           <input
             type="text"
-            id="x-unit-input"
+            id="unit-input"
             class="form-input"
-            placeholder="X"
-            value="m"
-          />
-          <span class="unit-separator">/</span>
-          <input
-            type="text"
-            id="y-unit-input"
-            class="form-input"
-            placeholder="Y"
-            value="m"
+            value="px"
+            style="width: 50px; text-align: center; flex: 0 0 50px"
           />
         </div>
       </div>

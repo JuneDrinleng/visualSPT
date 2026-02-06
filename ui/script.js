@@ -115,10 +115,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalLbl = root.querySelector("#total-traj-lbl");
 
     const scaleInput = root.querySelector("#scale-input");
+    const unitInput = root.querySelector("#unit-input");
     const fpsInput = root.querySelector("#fps-input");
     const zeroStartSwitch = root.querySelector("#zero-start-switch");
-    const xUnitInput = root.querySelector("#x-unit-input");
-    const yUnitInput = root.querySelector("#y-unit-input");
 
     const titleInput = root.querySelector("#title-input");
     const markersSwitch = root.querySelector("#markers-switch");
@@ -130,13 +129,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let isFileLoaded = false;
 
     function getPlotParams() {
+      const unit = unitInput ? unitInput.value || "px" : "px";
       return {
         index: parseInt(slider.value) || 0,
         scale: parseFloat(scaleInput.value) || 1.0,
         fps: fpsInput ? parseInt(fpsInput.value) || 20 : 20,
         zero_start: zeroStartSwitch ? zeroStartSwitch.checked : false,
-        x_unit: xUnitInput ? xUnitInput.value || "px" : "px",
-        y_unit: yUnitInput ? yUnitInput.value || "px" : "px",
+        x_unit: unit,
+        y_unit: unit,
         custom_title: titleInput ? titleInput.value : "",
         show_markers: markersSwitch ? markersSwitch.checked : true,
         show_title: showTitleSwitch ? showTitleSwitch.checked : true,
@@ -196,9 +196,8 @@ document.addEventListener("DOMContentLoaded", () => {
       slider.addEventListener("change", updatePlot);
     }
     if (scaleInput) scaleInput.addEventListener("change", updatePlot);
+    if (unitInput) unitInput.addEventListener("change", updatePlot);
     if (zeroStartSwitch) zeroStartSwitch.addEventListener("change", updatePlot);
-    if (xUnitInput) xUnitInput.addEventListener("change", updatePlot);
-    if (yUnitInput) yUnitInput.addEventListener("change", updatePlot);
     if (titleInput) titleInput.addEventListener("change", updatePlot);
     if (markersSwitch) markersSwitch.addEventListener("change", updatePlot);
     if (showTitleSwitch) showTitleSwitch.addEventListener("change", updatePlot);
@@ -291,11 +290,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalLbl = root.querySelector("#total-traj-lbl");
 
     const scaleInput = root.querySelector("#scale-input");
+    const unitInput = root.querySelector("#unit-input");
     const fpsInput = root.querySelector("#fps-input");
     const trailLenInput = root.querySelector("#trail-len-input");
     const zeroStartSwitch = root.querySelector("#zero-start-switch");
-    const xUnitInput = root.querySelector("#x-unit-input");
-    const yUnitInput = root.querySelector("#y-unit-input");
 
     const titleInput = root.querySelector("#title-input");
     const timebarSwitch = root.querySelector("#timebar-switch");
@@ -307,6 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let isFileLoaded = false;
 
     function getPlotParams() {
+      const unit = unitInput ? unitInput.value || "px" : "px";
       return {
         index: parseInt(slider.value) || 0,
         scale: scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0,
@@ -316,8 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ? parseInt(trailLenInput.value)
             : 0,
         zero_start: zeroStartSwitch ? zeroStartSwitch.checked : false,
-        x_unit: xUnitInput ? xUnitInput.value || "px" : "px",
-        y_unit: yUnitInput ? yUnitInput.value || "px" : "px",
+        x_unit: unit,
+        y_unit: unit,
         custom_title: titleInput ? titleInput.value : "",
         show_timebar: timebarSwitch ? timebarSwitch.checked : true,
         show_title: showTitleSwitch ? showTitleSwitch.checked : true,
@@ -340,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.pywebview.api
           .change_activation(
             params.index,
-            1.0, // keep scale default for activation
+            params.scale,
             params.fps,
             params.trail_len,
             params.zero_start,
@@ -379,11 +378,10 @@ document.addEventListener("DOMContentLoaded", () => {
       slider.addEventListener("change", updatePlot);
     }
     if (scaleInput) scaleInput.addEventListener("change", updatePlot);
+    if (unitInput) unitInput.addEventListener("change", updatePlot);
     if (fpsInput) fpsInput.addEventListener("change", updatePlot);
     if (trailLenInput) trailLenInput.addEventListener("change", updatePlot);
     if (zeroStartSwitch) zeroStartSwitch.addEventListener("change", updatePlot);
-    if (xUnitInput) xUnitInput.addEventListener("change", updatePlot);
-    if (yUnitInput) yUnitInput.addEventListener("change", updatePlot);
     if (titleInput) titleInput.addEventListener("change", updatePlot);
     if (timebarSwitch) timebarSwitch.addEventListener("change", updatePlot);
     if (showTitleSwitch) showTitleSwitch.addEventListener("change", updatePlot);
