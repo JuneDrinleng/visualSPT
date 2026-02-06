@@ -24,12 +24,32 @@ _TRAY_QUIT_EVENT = threading.Event()
 
 # Windows helper to bring window to front using Win32 API
 _IS_WINDOWS = os.name == 'nt'
+_wndproc_ref = None  # prevent GC of the callback
+_original_wndproc = None
+
 if _IS_WINDOWS:
     try:
         import ctypes
         from ctypes import wintypes
 
         user32 = ctypes.windll.user32
+        # 选择正确的 64/32 位函数
+        if ctypes.sizeof(ctypes.c_void_p) == 8:
+            _SetWindowLongPtr = user32.SetWindowLongPtrW
+            _GetWindowLongPtr = user32.GetWindowLongPtrW
+            _SetWindowLongPtr.restype = ctypes.c_void_p
+            _SetWindowLongPtr.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_void_p]
+            _GetWindowLongPtr.restype = ctypes.c_void_p
+            _GetWindowLongPtr.argtypes = [wintypes.HWND, ctypes.c_int]
+        else:
+            _SetWindowLongPtr = user32.SetWindowLongW
+            _GetWindowLongPtr = user32.GetWindowLongW
+
+        _CallWindowProcW = user32.CallWindowProcW
+        _CallWindowProcW.restype = ctypes.c_long
+        _CallWindowProcW.argtypes = [ctypes.c_void_p, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+
+        WNDPROC = ctypes.WINFUNCTYPE(ctypes.c_long, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
 
         def _bring_window_to_front_by_title(title):
             try:
@@ -94,35 +114,79 @@ def get_html_path():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, 'ui', 'index.html')
 
-def _apply_rounded_corners(hwnd, width, height, radius=12):
-    """通过 Win32 API 将窗口裁剪为圆角矩形，彻底消除白色直角"""
+def _apply_rounded_corners(hwnd, radius=16):
+    """通过 Win32 API 将窗口裁剪为圆角矩形"""
     try:
         gdi32 = ctypes.windll.gdi32
-        # 获取 DPI 缩放后的实际窗口尺寸
         rect = wintypes.RECT()
-        user32.GetClientRect(hwnd, ctypes.byref(rect))
-        w = rect.right
-        h = rect.bottom
-        if w == 0 or h == 0:
-            w, h = width, height
-        # 创建圆角矩形区域
-        hrgn = gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, radius, radius)
-        if hrgn:
-            user32.SetWindowRgn(hwnd, hrgn, True)
+        user32.GetWindowRect(hwnd, ctypes.byref(rect))
+        w = rect.right - rect.left
+        h = rect.bottom - rect.top
+        if w > 0 and h > 0:
+            hrgn = gdi32.CreateRoundRectRgn(0, 0, w + 1, h + 1, radius, radius)
+            if hrgn:
+                user32.SetWindowRgn(hwnd, hrgn, True)
     except Exception as e:
         _tlog(f"[RoundCorner] error: {e}")
 
+_corner_radius = 16
+
+def _subclass_window(hwnd):
+    """子类化窗口过程，实现：
+    1. WM_NCCALCSIZE → 返回0，隐藏标题栏/边框 + 重新应用圆角
+    2. WM_ERASEBKGND → 返回1，阻止白色背景绘制（消除恢复时闪白）
+    """
+    global _original_wndproc, _wndproc_ref
+
+    WM_NCCALCSIZE = 0x0083
+    WM_ERASEBKGND = 0x0014
+    WM_SIZE = 0x0005
+    GWLP_WNDPROC = -4
+
+    def _custom_wndproc(h, msg, wparam, lparam):
+        if msg == WM_NCCALCSIZE and wparam:
+            # 返回 0 使非客户区大小为零，保持无边框但保留动画
+            return 0
+        if msg == WM_ERASEBKGND:
+            # 阻止背景擦除，防止恢复时闪白
+            return 1
+        if msg == WM_SIZE:
+            # 窗口大小变化（包括从最小化恢复）时重新应用圆角
+            result = _CallWindowProcW(_original_wndproc, h, msg, wparam, lparam)
+            _apply_rounded_corners(h, _corner_radius)
+            return result
+        return _CallWindowProcW(_original_wndproc, h, msg, wparam, lparam)
+
+    _wndproc_ref = WNDPROC(_custom_wndproc)
+    _original_wndproc = _SetWindowLongPtr(hwnd, GWLP_WNDPROC, ctypes.cast(_wndproc_ref, ctypes.c_void_p).value)
+
 def on_start_background_loading():
-    # 通过 Win32 Region 实现真正的圆角窗口
     if _IS_WINDOWS:
         try:
             time.sleep(0.3)  # 等待窗口完全创建
             title = getattr(window, 'title', 'visualSPT')
             hwnd = user32.FindWindowW(None, title)
             if hwnd:
-                _apply_rounded_corners(hwnd, 800, 610, radius=16)
+                # 添加 WS_CAPTION | WS_MINIMIZEBOX 启用最小化/还原动画和任务栏交互
+                GWL_STYLE = -16
+                WS_CAPTION = 0x00C00000
+                WS_MINIMIZEBOX = 0x00020000
+                style = _GetWindowLongPtr(hwnd, GWL_STYLE)
+                new_style = style | WS_CAPTION | WS_MINIMIZEBOX
+                _SetWindowLongPtr(hwnd, GWL_STYLE, new_style)
+                # 子类化窗口过程：隐藏标题栏 + 防止闪白 + 自动维护圆角
+                _subclass_window(hwnd)
+                # 通知系统样式已变更
+                SWP_FRAMECHANGED = 0x0020
+                SWP_NOMOVE = 0x0002
+                SWP_NOSIZE = 0x0001
+                SWP_NOZORDER = 0x0004
+                user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0,
+                                    SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER)
+                # 初始应用圆角
+                _apply_rounded_corners(hwnd, _corner_radius)
         except Exception as e:
-            _tlog(f"[RoundCorner] apply error: {e}")
+            _tlog(f"[WindowSetup] error: {e}")
     api.preload_libraries()
     time.sleep(0.5)
     if window:

@@ -169,10 +169,28 @@ class Api:
             return {"error": str(e)}
         return {"error": "no window"}
 
+    def _get_hwnd(self):
+        """获取窗口的 Win32 句柄"""
+        hwnd = getattr(self._window, '_hwnd', None)
+        if hwnd:
+            return hwnd
+        # fallback: 通过标题查找
+        try:
+            import ctypes
+            return ctypes.windll.user32.FindWindowW(None, self._window.title)
+        except Exception:
+            return None
+
     def minimize_window(self):
         try:
             if self._window:
-                self._window.minimize()
+                hwnd = self._get_hwnd()
+                if hwnd:
+                    import ctypes
+                    SW_MINIMIZE = 6
+                    ctypes.windll.user32.ShowWindow(hwnd, SW_MINIMIZE)
+                else:
+                    self._window.minimize()
                 return {"success": True}
         except Exception as e:
             return {"error": str(e)}
@@ -190,7 +208,13 @@ class Api:
     def restore_window(self):
         try:
             if self._window:
-                self._window.restore()
+                hwnd = self._get_hwnd()
+                if hwnd:
+                    import ctypes
+                    SW_RESTORE = 9
+                    ctypes.windll.user32.ShowWindow(hwnd, SW_RESTORE)
+                else:
+                    self._window.restore()
                 return {"success": True}
         except Exception as e:
             return {"error": str(e)}
