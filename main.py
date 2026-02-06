@@ -2,7 +2,7 @@ import webview
 import os
 import threading
 import time
-from server.api import Api
+from server.api.core import Api
 import logging
 
 
