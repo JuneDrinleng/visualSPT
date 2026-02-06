@@ -5,29 +5,24 @@ import threading
 import time
 import webview 
 
-# --- 严禁在此处导入 pandas, matplotlib, numpy 或 tool.read_traj_file ---
 
 class Api:
     def __init__(self):
-        # 【关键修改】加下划线，变成私有变量，防止 pywebview 试图将其暴露给 JS 导致死循环
         self._window = None 
         
         self.trajectories = []
         self.current_file = ""
-        
-        # 库缓存
+
         self.pd = None
         self.np = None
         self.plt = None
         self.read_trackmate_csv = None
-        self.read_npy_traj = None # 补全定义
-        
-        # 状态标记
+        self.read_npy_traj = None 
+
         self.is_loading_libs = False
         self.libs_loaded = False
 
     def set_window(self, window):
-        # 【关键修改】使用 _window
         self._window = window
 
     def preload_libraries(self):
@@ -35,7 +30,7 @@ class Api:
             return
 
         self.is_loading_libs = True
-        print("[System] 正在后台静默加载数据科学库...")
+        print("[System] Loading the libraries...")
         
         try:
             import matplotlib
@@ -50,8 +45,7 @@ class Api:
             self.np = np
             self.read_trackmate_csv = read_trackmate_csv
             self.read_npy_traj = read_npy_traj
-            
-            # --- Matplotlib 预热 (防止第一次绘图卡顿) ---
+
             try:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
@@ -60,26 +54,24 @@ class Api:
                 plt.close(fig)
             except:
                 pass
-            # ----------------------------------------
 
             self.libs_loaded = True
-            print("[System] 库加载完成，系统就绪。")
+            print("[System] Libraries loaded, system is ready.")
         except Exception as e:
-            print(f"[System] 预加载失败: {e}")
+            print(f"[System] Preload failed: {e}")
         finally:
             self.is_loading_libs = False
 
     def _ensure_libs(self):
         if self.libs_loaded:
             return
-        print("[System] 用户操作过快，转为前台加载...")
+        print("[System] User actions too fast, switching to foreground loading...")
         self.preload_libraries()
 
     def process_file_dialog(self):
         self._ensure_libs() 
         file_types = ('Data Files (*.csv;*.npz;*.npy)', 'All files (*.*)')
-        
-        # 【关键修改】使用 self._window 调用方法
+
         if not self._window:
             return {"error": "Window not initialized"}
             
@@ -108,12 +100,11 @@ class Api:
                     first_traj_img = self._plot_trajectory_by_index(0)
                 return {"file_path": file_path, "total_trajs": traj_number, "image": first_traj_img}
             else:
-                 return {"error": "目前仅支持 CSV/NPY 文件"}
+                 return {"error": "Currently only CSV/NPY files are supported"}
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return {"error": f"处理出错: {str(e)}"}
-
+            return {"error": f"Processing error: {str(e)}"}
     def change_trajectory(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
         self._ensure_libs()
         try:
@@ -123,14 +114,13 @@ class Api:
                 img = self._plot_trajectory_by_index(index, scale, zero_start, x_unit, y_unit, custom_title, show_markers, show_title, show_axis_labels, show_grid)
                 return {"image": img}
             else:
-                return {"error": "索引越界"}
+                return {"error": "Index out of range"}
         except Exception as e:
             return {"error": str(e)}
 
-    def save_plot(self, options): # 【关键修改】这里只接收一个 options 参数
+    def save_plot(self, options): 
         self._ensure_libs()
         try:
-            # 1. 先弹出保存对话框
             save_path = self._window.create_file_dialog(
                 webview.SAVE_DIALOG, 
                 save_filename=f"traj_{options.get('index', 0)}.svg",
@@ -139,9 +129,6 @@ class Api:
             
             if not save_path: return {"cancelled": True}
             save_path = save_path if isinstance(save_path, str) else save_path[0]
-
-            # 2. 【关键修改】从字典中手动提取参数，并设置默认值
-            # 这样无论 JS 怎么传，Python 都能精准拿到对应的 key
             index = int(options.get('index', 0))
             scale = float(options.get('scale', 1.0))
             zero_start = options.get('zero_start', False)
@@ -152,8 +139,6 @@ class Api:
             show_title = options.get('show_title', True)
             show_axis_labels = options.get('show_axis_labels', True)
             show_grid = options.get('show_grid', True)
-            
-            # 3. 获取数据并绘图
             traj = self.trajectories[index]
             x, y = self._extract_xy(traj)
             
