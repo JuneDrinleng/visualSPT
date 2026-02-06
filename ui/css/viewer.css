@@ -101,13 +101,13 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   border-radius: 50%;
   background: var(--active-color);
-  cursor: grab;
+  cursor: pointer; /* Changed from grab to avoid blurry Windows cursor */
   margin-top: -5px; /* (thumbHeight / 2) - (trackHeight / 2) | 7 - 2 = 5 */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: transform 0.1s;
 }
 input[type="range"]::-webkit-slider-thumb:active {
-  cursor: grabbing;
+  cursor: pointer; /* Changed from grabbing */
   transform: scale(1.1);
 }
 

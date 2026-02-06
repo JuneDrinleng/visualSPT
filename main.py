@@ -234,8 +234,11 @@ if __name__ == '__main__':
         height=610,
         min_size=(800, 610),
         frameless=True,
+        easy_drag=False,
+        transparent=True,
         hidden=True,
-        resizable=False
+        resizable=False,
+        zoomable=False
     )
     
     api.set_window(window)

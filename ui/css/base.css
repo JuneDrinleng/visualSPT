@@ -14,6 +14,15 @@
   margin: 0;
   padding: 0;
   outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+*:focus {
+  outline: none !important;
+}
+
+html {
+  background: transparent;
 }
 
 body {
@@ -27,6 +36,8 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-size: 13px;
+  border-radius: 10px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0); /* Force GPU layer mostly */
 }
 
 /* content row holds the sidebar and main-content horizontally */
@@ -61,12 +72,26 @@ body {
   text-align: left;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-left-color 0.2s ease;
   width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
   border-left: 3px solid transparent;
+  border-radius: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-btn:focus,
+.nav-btn:active,
+.nav-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .nav-btn:hover {
