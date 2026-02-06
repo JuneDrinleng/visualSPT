@@ -7,7 +7,7 @@
         >未选择文件</span
       >
       <button id="uploadBtn" class="action-btn">
-        <span>📂</span> 打开文件
+        <i data-lucide="folder-open" class="icon-btn"></i> 打开文件
       </button>
     </div>
   </div>
@@ -16,10 +16,20 @@
     <div class="viz-left">
       <div id="plot-container">
         <div id="placeholder" class="placeholder-box">
-          <div style="font-size: 2rem; opacity: 0.2">📉</div>
+          <i
+            data-lucide="image"
+            style="width: 48px; height: 48px; opacity: 0.15; stroke-width: 1.5"
+          ></i>
           <p>请点击右上角打开数据文件</p>
         </div>
-        <div id="loading">🚀 正在渲染...</div>
+        <div id="loading">
+          <i
+            data-lucide="loader"
+            class="icon-spin"
+            style="width: 16px; height: 16px"
+          ></i>
+          正在渲染...
+        </div>
         <div
           id="error-msg"
           style="color: red; display: none; padding: 20px"
@@ -161,7 +171,9 @@
       </div>
 
       <div class="action-area">
-        <button id="saveBtn" class="btn-save"><span>💾</span> 保存视图</button>
+        <button id="saveBtn" class="btn-save">
+          <i data-lucide="download" class="icon-btn"></i> 保存视图
+        </button>
       </div>
     </div>
   </div>

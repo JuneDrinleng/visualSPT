@@ -60,6 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       // re-set innerHTML after extracting links to avoid duplicate tags
       app.innerHTML = html.replace(/<link[^>]+>/gi, "");
+      // 重新初始化动态加载内容中的 Lucide 图标
+      if (typeof lucide !== "undefined") lucide.createIcons();
       setActiveButton(key);
       _currentPage = key;
       if (pushState) history.pushState({ page: key }, "", `#${key}`);

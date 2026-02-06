@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TrajViz Pro</title>
+    <title>visualSPT</title>
     <link rel="stylesheet" href="css/base.css" />
+    <script src="lucide.min.js"></script>
   </head>
   <body>
     <div class="window-frame">
@@ -13,29 +14,31 @@
           <div class="app-title">visualSPT</div>
         </div>
         <div class="titlebar-right">
-          <button id="min-btn" class="title-btn">—</button>
-          <button id="close-btn" class="title-btn close">✕</button>
+          <button id="min-btn" class="title-btn">
+            <i data-lucide="minus" class="icon-sm"></i>
+          </button>
+          <button id="close-btn" class="title-btn close">
+            <i data-lucide="x" class="icon-sm"></i>
+          </button>
         </div>
       </div>
       <div class="content-row">
         <div class="sidebar">
-          <div class="logo">visualSPT</div>
           <nav>
             <button class="nav-btn active" data-target="page-viz">
-              <span>🎨</span> 静态轨迹图
+              <i data-lucide="route" class="icon-nav"></i> 静态轨迹图
             </button>
             <button class="nav-btn" data-target="page-activate-traj">
-              <span>🎬</span> 动态轨迹图
+              <i data-lucide="play-circle" class="icon-nav"></i> 动态轨迹图
             </button>
             <button class="nav-btn" data-target="page-tamsd">
-              <span>💻</span> TAMSD计算
+              <i data-lucide="bar-chart-3" class="icon-nav"></i> TAMSD计算
             </button>
             <button class="nav-btn" data-target="page-eamsd">
-              <span>📠</span> EAMSD计算
+              <i data-lucide="trending-up" class="icon-nav"></i> EAMSD计算
             </button>
           </nav>
         </div>
-        <!-- 主内容容器：通过 fetch 动态加载 pages 下的片段 -->
         <div class="main-content">
           <div id="app"></div>
         </div>
@@ -43,5 +46,8 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+      lucide.createIcons();
+    </script>
   </body>
 </html>

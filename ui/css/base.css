@@ -1,12 +1,15 @@
 :root {
-  --bg-color: #f0f2f5;
-  --sidebar-bg: #2c3e50;
-  --active-color: #3498db;
-  --active-hover: #2980b9;
-  --text-color: #2c3e50;
-  --border-color: #e1e4e8;
-  --panel-bg: #f8f9fa;
-  --input-border: #ced4da;
+  --bg-color: #f5f6fa;
+  --sidebar-bg: #1e293b;
+  --sidebar-hover: #334155;
+  --active-color: #6366f1;
+  --active-hover: #4f46e5;
+  --active-light: rgba(99, 102, 241, 0.1);
+  --text-color: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+  --panel-bg: #f8fafc;
+  --input-border: #cbd5e1;
 }
 
 * {
@@ -66,14 +69,14 @@ body {
 
 /* --- 侧边栏 --- */
 .sidebar {
-  width: 150px;
+  width: 160px;
   background-color: var(--sidebar-bg);
-  color: #ecf0f1;
+  color: #cbd5e1;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   z-index: 10;
-  padding-top: 20px;
+  padding-top: 12px;
 }
 
 .logo {
@@ -83,11 +86,11 @@ body {
 .nav-btn {
   background: none;
   border: none;
-  color: #bdc3c7;
-  padding: 10px 15px;
+  color: #94a3b8;
+  padding: 10px 16px;
   text-align: left;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   transition:
     background-color 0.2s ease,
     color 0.2s ease,
@@ -95,12 +98,13 @@ body {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border-left: 3px solid transparent;
   border-radius: 0;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  letter-spacing: 0.02em;
 }
 
 .nav-btn:focus,
@@ -111,12 +115,12 @@ body {
 }
 
 .nav-btn:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background-color: var(--sidebar-hover);
+  color: #e2e8f0;
 }
 
 .nav-btn.active {
-  background-color: rgba(52, 152, 219, 0.1);
+  background-color: var(--active-light);
   color: #fff;
   border-left-color: var(--active-color);
 }
@@ -143,7 +147,7 @@ body {
 
 /* Custom title bar (for frameless window) */
 .titlebar {
-  height: 32px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -155,24 +159,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 150px;
+  width: 160px;
   height: 100%;
   background-color: var(--sidebar-bg);
   flex-shrink: 0;
 }
 .app-title {
   font-weight: 700;
-  color: #ecf0f1;
-  font-size: 1.1rem;
-  margin-top: 8px;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  margin-top: 6px;
 }
 .titlebar-right {
   display: flex;
-  gap: 4px;
-  padding-right: 10px;
+  gap: 2px;
+  padding-right: 8px;
 }
 .title-btn {
-  width: 34px;
+  width: 36px;
   height: 28px;
   border: none;
   background: transparent;
@@ -181,28 +186,22 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  color: #95a5a6; /* Lighter icon color */
+  border-radius: 6px;
+  color: var(--text-secondary);
   transition:
     background-color 150ms ease,
     color 150ms ease;
 }
 .title-btn:hover {
-  background: rgba(0, 0, 0, 0.03);
-  color: #2c3e50;
+  background: var(--bg-color);
+  color: var(--text-color);
 }
 .title-btn:active {
-  background: rgba(0, 0, 0, 0.06);
-}
-.title-btn.close {
-  color: #c0392b;
+  background: var(--border-color);
 }
 .title-btn.close:hover {
-  background: rgba(192, 57, 43, 0.08);
-}
-.title-btn.active {
-  background: rgba(52, 152, 219, 0.15);
-  color: var(--active-color);
+  background: #fef2f2;
+  color: #dc2626;
 }
 .card {
   background: white;
@@ -226,13 +225,43 @@ body {
 }
 
 .card-header h1 {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-color);
+  letter-spacing: 0.01em;
 }
 
 .upload-section {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* --- Lucide icon utility classes --- */
+.icon-sm {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+}
+.icon-nav {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
+  flex-shrink: 0;
+}
+.icon-btn {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
