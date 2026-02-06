@@ -319,7 +319,7 @@ def _create_tray(window, quit_event):
             pass
 
     icon = pystray.Icon('visualSPT', _make_image(), 'visualSPT', menu=pystray.Menu(
-        pystray.MenuItem('Show', on_show),
+        pystray.MenuItem('Show', on_show, default=True),
         pystray.MenuItem('Quit', on_quit)
     ))
 

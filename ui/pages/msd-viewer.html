@@ -1,7 +1,7 @@
 <link rel="stylesheet" href="css/viewer.css" />
 <div class="card">
   <div class="card-header">
-    <h1>轨迹动态可视化</h1>
+    <h1>MSD可视化</h1>
     <div class="upload-section">
       <span id="file-path-display" style="color: #95a5a6; font-size: 0.8rem"
         >未选择文件</span
@@ -115,9 +115,7 @@
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0"
-            >显示起终点 & 图例</label
-          >
+          <label class="setting-label" style="margin: 0">显示图例</label>
           <label class="switch"
             ><input type="checkbox" id="markers-switch" checked /><span
               class="slider"
@@ -128,7 +126,7 @@
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0">起点归零 (0,0)</label>
+          <label class="setting-label" style="margin: 0">绘制EAMSD</label>
           <label class="switch"
             ><input type="checkbox" id="zero-start-switch" checked /><span
               class="slider"
@@ -161,7 +159,7 @@
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0">显示网格线</label>
+          <label class="setting-label" style="margin: 0">绘制TAMSD</label>
           <label class="switch"
             ><input type="checkbox" id="show-grid-switch" checked /><span
               class="slider"
