@@ -341,7 +341,8 @@ if __name__ == '__main__':
                 # Another instance is running, try to activate its window and exit
                 _bring_window_to_front_by_title('visualSPT')
                 sys.exit(0)
-        except Exception:
+        except Exception as e:
+            print(f"[InstanceCheck] error: {e}")
             pass
 
     api = Api()
@@ -375,30 +376,34 @@ if __name__ == '__main__':
             try:
                 if event is not None and hasattr(event, 'prevent_default'):
                     event.prevent_default()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[Window] prevent_default error: {e}")
             try:
                 window.hide()
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[Window] hide error: {e}")
 
         # attach closing handler
         try:
             window.events.closing += _on_closing
-        except Exception:
+        except Exception as e:
+            print(f"[Window] attach closing handler error: {e}")
             # fallback: some backends may not support 'closing'; ignore
             pass
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Window] error in closing handler setup: {e}")
 
     # webview must run on the main thread
     try:
         webview.start(func=on_start_background_loading, debug=False)
+        print("[GUI] webview started")
     except Exception as e:
         print(f"[GUI] webview.start error: {e}")
 
     # keep process alive until user chooses 'Quit' from tray
     try:
         _TRAY_QUIT_EVENT.wait()
+        print("[System] Quit event received, quitting")
     except KeyboardInterrupt:
+        print("[System] KeyboardInterrupt received, quitting")
         pass

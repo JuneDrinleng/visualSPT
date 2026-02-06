@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     navBtns.forEach((b) => {
       const t = b.getAttribute("data-target");
       // Map data-target to page key for comparison
-      const pageKey = t === "page-viz" ? "viewer" : t.replace(/^page-/, "");
+      const pageKey = t.replace(/^page-/, "");
       if (pageKey === targetKey) b.classList.add("active");
       else b.classList.remove("active");
     });
@@ -80,8 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => {
       const target = btn.getAttribute("data-target");
       // map old ids to page keys
-      const pageKey =
-        target === "page-viz" ? "viewer" : target.replace(/^page-/, "");
+      const pageKey = target.replace(/^page-/, "");
       loadPage(pageKey);
     });
   });
@@ -89,16 +88,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // handle back/forward
   window.addEventListener("popstate", (e) => {
     const key =
-      (e.state && e.state.page) || location.hash.replace(/^#/, "") || "viewer";
+      (e.state && e.state.page) ||
+      location.hash.replace(/^#/, "") ||
+      "traj-viewer";
     loadPage(key, false);
   });
 
   // initial load: use hash or default
-  const initial = location.hash.replace(/^#/, "") || "viewer";
+  const initial = location.hash.replace(/^#/, "") || "traj-viewer";
   loadPage(initial, false);
 
-  // --- Per-page initializer: viewer ---
-  window.init_viewer = function () {
+  // --- Per-page initializer: traj-viewer ---
+  window.init_traj_viewer = function () {
     // attach previous logic but only for elements inside #app
     const root = document.getElementById("app");
     const uploadBtn = root.querySelector("#uploadBtn");
@@ -113,6 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const indexLbl = root.querySelector("#traj-index-lbl");
     const totalLbl = root.querySelector("#total-traj-lbl");
 
+    const scaleInput = root.querySelector("#scale-input");
     const fpsInput = root.querySelector("#fps-input");
     const zeroStartSwitch = root.querySelector("#zero-start-switch");
     const xUnitInput = root.querySelector("#x-unit-input");
@@ -130,10 +132,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function getPlotParams() {
       return {
         index: parseInt(slider.value) || 0,
-        fps: parseInt(fpsInput.value) || 20,
-        zero_start: zeroStartSwitch.checked,
-        x_unit: xUnitInput.value || "px",
-        y_unit: yUnitInput.value || "px",
+        scale: parseFloat(scaleInput.value) || 1.0,
+        fps: fpsInput ? parseInt(fpsInput.value) || 20 : 20,
+        zero_start: zeroStartSwitch ? zeroStartSwitch.checked : false,
+        x_unit: xUnitInput ? xUnitInput.value || "px" : "px",
+        y_unit: yUnitInput ? yUnitInput.value || "px" : "px",
         custom_title: titleInput ? titleInput.value : "",
         show_markers: markersSwitch ? markersSwitch.checked : true,
         show_title: showTitleSwitch ? showTitleSwitch.checked : true,
@@ -179,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .catch((err) => {
             loading.style.display = "none";
-            errorMsg.textContent = "系统异常: " + err;
+            errorMsg.textContent = "System error: " + err;
             errorMsg.style.display = "block";
           });
       }
@@ -288,12 +291,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalLbl = root.querySelector("#total-traj-lbl");
 
     const scaleInput = root.querySelector("#scale-input");
+    const fpsInput = root.querySelector("#fps-input");
+    const trailLenInput = root.querySelector("#trail-len-input");
     const zeroStartSwitch = root.querySelector("#zero-start-switch");
     const xUnitInput = root.querySelector("#x-unit-input");
     const yUnitInput = root.querySelector("#y-unit-input");
 
     const titleInput = root.querySelector("#title-input");
-    const markersSwitch = root.querySelector("#markers-switch");
+    const timebarSwitch = root.querySelector("#timebar-switch");
     const showTitleSwitch = root.querySelector("#show-title-switch");
     const showAxisLabelsSwitch = root.querySelector("#show-axis-labels-switch");
     const showGridSwitch = root.querySelector("#show-grid-switch");
@@ -304,12 +309,17 @@ document.addEventListener("DOMContentLoaded", () => {
     function getPlotParams() {
       return {
         index: parseInt(slider.value) || 0,
-        scale: parseFloat(scaleInput.value) || 1.0,
-        zero_start: zeroStartSwitch.checked,
-        x_unit: xUnitInput.value || "px",
-        y_unit: yUnitInput.value || "px",
+        scale: scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0,
+        fps: fpsInput ? parseInt(fpsInput.value) || 20 : 20,
+        trail_len:
+          trailLenInput && trailLenInput.value
+            ? parseInt(trailLenInput.value)
+            : 0,
+        zero_start: zeroStartSwitch ? zeroStartSwitch.checked : false,
+        x_unit: xUnitInput ? xUnitInput.value || "px" : "px",
+        y_unit: yUnitInput ? yUnitInput.value || "px" : "px",
         custom_title: titleInput ? titleInput.value : "",
-        show_markers: markersSwitch ? markersSwitch.checked : true,
+        show_timebar: timebarSwitch ? timebarSwitch.checked : true,
         show_title: showTitleSwitch ? showTitleSwitch.checked : true,
         show_axis_labels: showAxisLabelsSwitch
           ? showAxisLabelsSwitch.checked
@@ -332,11 +342,12 @@ document.addEventListener("DOMContentLoaded", () => {
             params.index,
             1.0, // keep scale default for activation
             params.fps,
+            params.trail_len,
             params.zero_start,
             params.x_unit,
             params.y_unit,
             params.custom_title,
-            params.show_markers,
+            params.show_timebar,
             params.show_title,
             params.show_axis_labels,
             params.show_grid,
@@ -354,7 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
           })
           .catch((err) => {
             loading.style.display = "none";
-            errorMsg.textContent = "系统异常: " + err;
+            errorMsg.textContent = "System error: " + err;
             errorMsg.style.display = "block";
           });
       }
@@ -368,11 +379,13 @@ document.addEventListener("DOMContentLoaded", () => {
       slider.addEventListener("change", updatePlot);
     }
     if (scaleInput) scaleInput.addEventListener("change", updatePlot);
+    if (fpsInput) fpsInput.addEventListener("change", updatePlot);
+    if (trailLenInput) trailLenInput.addEventListener("change", updatePlot);
     if (zeroStartSwitch) zeroStartSwitch.addEventListener("change", updatePlot);
     if (xUnitInput) xUnitInput.addEventListener("change", updatePlot);
     if (yUnitInput) yUnitInput.addEventListener("change", updatePlot);
     if (titleInput) titleInput.addEventListener("change", updatePlot);
-    if (markersSwitch) markersSwitch.addEventListener("change", updatePlot);
+    if (timebarSwitch) timebarSwitch.addEventListener("change", updatePlot);
     if (showTitleSwitch) showTitleSwitch.addEventListener("change", updatePlot);
     if (showAxisLabelsSwitch)
       showAxisLabelsSwitch.addEventListener("change", updatePlot);
@@ -381,7 +394,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (uploadBtn)
       uploadBtn.addEventListener("click", () => {
         if (!window.pywebview) {
-          alert("请在 Pywebview 环境下运行！");
+          alert("Please run in the Pywebview environment!");
           return;
         }
         placeholder.style.display = "none";
@@ -398,9 +411,9 @@ document.addEventListener("DOMContentLoaded", () => {
               return;
             }
             if (res.error) {
-              errorMsg.textContent = "错误: " + res.error;
+              errorMsg.textContent = "Error: " + res.error;
               errorMsg.style.display = "block";
-              filePathDisplay.textContent = "读取失败";
+              filePathDisplay.textContent = "Failed to read";
               isFileLoaded = false;
             } else {
               isFileLoaded = true;
@@ -410,14 +423,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 slider.max = res.total_trajs - 1;
                 slider.value = 0;
                 indexLbl.textContent = "1";
-                totalLbl.textContent = `/ 共 ${res.total_trajs} 条`;
+                totalLbl.textContent = `/ ${res.total_trajs} total`;
                 updatePlot();
               }
             }
           })
           .catch((err) => {
             loading.style.display = "none";
-            errorMsg.textContent = "系统异常: " + err;
+            errorMsg.textContent = "System error: " + err;
             errorMsg.style.display = "block";
           });
       });
@@ -425,21 +438,21 @@ document.addEventListener("DOMContentLoaded", () => {
     if (saveBtn)
       saveBtn.addEventListener("click", () => {
         if (!isFileLoaded) {
-          alert("请先加载数据！");
+          alert("Please load data first!");
           return;
         }
         const params = getPlotParams();
         const originalText = saveBtn.innerHTML;
-        saveBtn.innerHTML = "<span>⏳</span> 保存中...";
+        saveBtn.innerHTML = "<span>⏳</span> Saving...";
         saveBtn.disabled = true;
         if (window.pywebview) {
           window.pywebview.api.save_plot(params).then((res) => {
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
             if (res.success) {
-              alert("保存成功！\n路径: " + res.path);
+              alert("Saved successfully!\nPath: " + res.path);
             } else if (res.error) {
-              alert("保存失败: " + res.error);
+              alert("Save failed: " + res.error);
             }
           });
         }

@@ -89,6 +89,8 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
 
         if show_grid:
             ax.grid(True, linestyle='--', alpha=0.3)
+            ax.axhline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
+            ax.axvline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
         else:
             ax.grid(False)
 
@@ -122,7 +124,7 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
         buf.close()
 
 
-def generate_activation_plot(plt, np, x, y, title='Activation Visualization', scale=1.0, fps=20, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+def generate_activation_plot(plt, np, x, y, title='Activation Visualization', scale=1.0, fps=20, trail_len=0, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_timebar=True, show_title=True, show_axis_labels=True, show_grid=True):
     """A variant of trajectory plot suitable for dynamic/activation visualization.
     This renders the trajectory as colored scatter points with a fading trail.
     """
@@ -150,7 +152,10 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
 
         # trail length and fps defaults
         L = len(x)
-        trail_len = max(1, L // 2)
+        if trail_len and trail_len > 0:
+            trail_len = min(trail_len, L)
+        else:
+            trail_len = max(1, L // 2)
         try:
             fps = int(fps)
         except Exception:
@@ -161,17 +166,43 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
         max_abs_y = np.max(np.abs(y))
         limit = max(max_abs_x, max_abs_y) * 1.1
 
-        fig, ax = plt.subplots(figsize=(5, 5), dpi=100)
+        if show_timebar:
+            from matplotlib.colorbar import ColorbarBase
+            from matplotlib.colors import Normalize
+            import matplotlib.gridspec as gridspec
+
+            fig = plt.figure(figsize=(5, 5.5), dpi=100)
+            gs = gridspec.GridSpec(2, 1, height_ratios=[30, 1], hspace=0.08, bottom=0.05, top=0.95)
+            ax = fig.add_subplot(gs[0])
+            ax_bar = fig.add_subplot(gs[1])
+        else:
+            fig, ax = plt.subplots(figsize=(5, 5), dpi=100)
+            ax_bar = None
+
         ax.set_xlim(-limit, limit)
         ax.set_ylim(-limit, limit)
         ax.set_aspect('equal')
         ax.axis('off')
-        ax.axhline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
-        ax.axvline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
+        if show_grid:
+            ax.axhline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
+            ax.axvline(0, color='gray', alpha=0.3, lw=1, linestyle='--')
 
         particle, = ax.plot([], [], 'o', color='#ef4444', markeredgecolor='white', markeredgewidth=1.5, markersize=8, zorder=10)
         lc = LineCollection([], cmap='coolwarm', linewidths=3, capstyle='round', norm=plt.Normalize(0, 1))
         ax.add_collection(lc)
+
+        # Static colorbar showing trail length range (blue → red)
+        if show_timebar and ax_bar is not None:
+            norm = Normalize(vmin=0, vmax=trail_len)
+            cb = ColorbarBase(ax_bar, cmap=plt.cm.coolwarm, norm=norm, orientation='horizontal')
+            cb.set_ticks([])
+            cb.set_label('')
+            cb.outline.set_linewidth(0.6)
+            cb.outline.set_edgecolor('#aaa')
+            # Label just above the colorbar
+            ax_bar.text(0.5, 1.15, f'Trail: {trail_len} frames', transform=ax_bar.transAxes,
+                        ha='center', va='bottom', fontsize=7, fontweight='semibold',
+                        color='#000', fontstyle='italic')
 
         def update(frame):
             current_x = x[frame]
@@ -191,7 +222,8 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
                 lc.set_clim(0, 1)
             else:
                 lc.set_segments([])
-            return particle, lc
+
+            return [particle, lc]
 
         ani = animation.FuncAnimation(fig, update, frames=range(L), interval=1000 / fps, blit=True)
 
@@ -224,7 +256,7 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
     except Exception as e:
         import traceback
         traceback.print_exc()
-        print(f"绘图出错 (activation): {e}")
+        print(f"Plot error (activation): {e}")
         try:
             plt.close(fig)
         except Exception:

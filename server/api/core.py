@@ -112,8 +112,8 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
-    def change_activation(self, index, scale=1.0, fps=20, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
-        """接口：为 activate-traj 页面暴露的绘图方法（激活/动态可视化变体）。"""
+    def change_activation(self, index, scale=1.0, fps=20, trail_len=0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_timebar=True, show_title=True, show_axis_labels=True, show_grid=True):
+        """API for activate-traj page (activation/dynamic visualization variant)."""
         self._ensure_libs()
         try:
             index = int(index)
@@ -122,8 +122,12 @@ class Api:
                 fps = int(fps)
             except Exception:
                 fps = 20
+            try:
+                trail_len = int(trail_len)
+            except Exception:
+                trail_len = 0
             if 0 <= index < len(self.trajectories):
-                img = self._plot_activation_by_index(index, scale, fps, zero_start, x_unit, y_unit, custom_title, show_markers, show_title, show_axis_labels, show_grid)
+                img = self._plot_activation_by_index(index, scale, fps, trail_len, zero_start, x_unit, y_unit, custom_title, show_timebar, show_title, show_axis_labels, show_grid)
                 return {"image": img}
             else:
                 return {"error": "Index out of range"}
@@ -243,7 +247,7 @@ class Api:
         x, y = api_plot.extract_xy(traj, self.pd, self.np)
         return api_plot.generate_plot(self.plt, self.np, x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)
 
-    def _plot_activation_by_index(self, index, scale=1.0, fps=20, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+    def _plot_activation_by_index(self, index, scale=1.0, fps=20, trail_len=0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_timebar=True, show_title=True, show_axis_labels=True, show_grid=True):
         traj = self.trajectories[index]
         x, y = api_plot.extract_xy(traj, self.pd, self.np)
-        return api_plot.generate_activation_plot(self.plt, self.np, x, y, title=f"Activation ID: {index}", scale=scale, fps=fps, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)
+        return api_plot.generate_activation_plot(self.plt, self.np, x, y, title=f"Activation ID: {index}", scale=scale, fps=fps, trail_len=trail_len, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_timebar=show_timebar, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)

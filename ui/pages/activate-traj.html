@@ -1,13 +1,13 @@
 <link rel="stylesheet" href="css/viewer.css" />
 <div class="card">
   <div class="card-header">
-    <h1>轨迹动态可视化</h1>
+    <h1>Trajectory Animation</h1>
     <div class="upload-section">
       <span id="file-path-display" style="color: #95a5a6; font-size: 0.8rem"
-        >未选择文件</span
+        >No file selected</span
       >
       <button id="uploadBtn" class="action-btn">
-        <i data-lucide="folder-open" class="icon-btn"></i> 打开文件
+        <i data-lucide="folder-open" class="icon-btn"></i> Open File
       </button>
     </div>
   </div>
@@ -20,7 +20,7 @@
             data-lucide="image"
             style="width: 48px; height: 48px; opacity: 0.15; stroke-width: 1.5"
           ></i>
-          <p>请点击右上角打开数据文件</p>
+          <p>Please click the top-right button to open a data file</p>
         </div>
         <div id="loading">
           <i
@@ -28,7 +28,7 @@
             class="icon-spin"
             style="width: 16px; height: 16px"
           ></i>
-          正在渲染...
+          Rendering...
         </div>
         <div
           id="error-msg"
@@ -63,9 +63,9 @@
     </div>
 
     <div class="viz-right">
-      <div class="panel-title">绘图参数</div>
+      <div class="panel-title">Plot Parameters</div>
       <div class="setting-group">
-        <label class="setting-label">帧率 (FPS)</label>
+        <label class="setting-label">Frame Rate (FPS)</label>
         <div class="unit-row">
           <input
             type="number"
@@ -80,7 +80,23 @@
       </div>
 
       <div class="setting-group">
-        <label class="setting-label">坐标轴单位 (X / Y)</label>
+        <label class="setting-label">Trail Length (frames)</label>
+        <div class="unit-row">
+          <input
+            type="number"
+            id="trail-len-input"
+            class="form-input"
+            value=""
+            step="1"
+            min="1"
+            placeholder="Auto"
+            style="text-align: center"
+          />
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">Axis Unit (X / Y)</label>
         <div class="unit-row">
           <input
             type="text"
@@ -101,25 +117,13 @@
       </div>
 
       <div class="setting-group">
-        <label class="setting-label">图表标题 (Title)</label>
-        <input
-          type="text"
-          id="title-input"
-          class="form-input"
-          placeholder="留空则显示默认ID"
-        />
-      </div>
-
-      <div class="setting-group">
         <div
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0"
-            >显示起终点 & 图例</label
-          >
+          <label class="setting-label" style="margin: 0">Show Time Bar</label>
           <label class="switch"
-            ><input type="checkbox" id="markers-switch" checked /><span
+            ><input type="checkbox" id="timebar-switch" checked /><span
               class="slider"
             ></span
           ></label>
@@ -128,29 +132,31 @@
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0">起点归零 (0,0)</label>
+          <label class="setting-label" style="margin: 0">Origin at (0,0)</label>
           <label class="switch"
             ><input type="checkbox" id="zero-start-switch" checked /><span
               class="slider"
             ></span
           ></label>
         </div>
-        <div
+        <!-- <div
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0">显示标题</label>
+          <label class="setting-label" style="margin: 0">Show Title</label>
           <label class="switch"
             ><input type="checkbox" id="show-title-switch" checked /><span
               class="slider"
             ></span
           ></label>
-        </div>
+        </div> -->
         <div
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0">显示坐标轴标签</label>
+          <label class="setting-label" style="margin: 0"
+            >Show Axis Labels</label
+          >
           <label class="switch"
             ><input type="checkbox" id="show-axis-labels-switch" checked /><span
               class="slider"
@@ -161,7 +167,7 @@
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
         >
-          <label class="setting-label" style="margin: 0">显示网格线</label>
+          <label class="setting-label" style="margin: 0">Show Grid Lines</label>
           <label class="switch"
             ><input type="checkbox" id="show-grid-switch" checked /><span
               class="slider"
@@ -172,7 +178,7 @@
 
       <div class="action-area">
         <button id="saveBtn" class="btn-save">
-          <i data-lucide="download" class="icon-btn"></i> 保存视图
+          <i data-lucide="download" class="icon-btn"></i> Save View
         </button>
       </div>
     </div>
