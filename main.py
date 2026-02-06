@@ -134,11 +134,18 @@ def _create_tray(window, quit_event):
         return
 
     def _make_image():
-        # simple square icon
-        img = Image.new('RGBA', (64, 64), (52, 152, 219, 255))
-        d = ImageDraw.Draw(img)
-        d.rectangle((12, 12, 52, 52), fill=(255, 255, 255, 255))
-        return img
+        # 加载项目 logo 作为托盘图标
+        try:
+            logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'logo', 'logo_transparent.png')
+            img = Image.open(logo_path)
+            img = img.resize((64, 64), Image.LANCZOS)
+            return img
+        except Exception:
+            # 回退：绘制简易图标
+            img = Image.new('RGBA', (64, 64), (52, 152, 219, 255))
+            d = ImageDraw.Draw(img)
+            d.rectangle((12, 12, 52, 52), fill=(255, 255, 255, 255))
+            return img
 
     def on_show(icon, item):
         try:
