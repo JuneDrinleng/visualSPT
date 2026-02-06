@@ -170,11 +170,11 @@ class Api:
         return {"error": "no window"}
 
     def _get_hwnd(self):
-        """获取窗口的 Win32 句柄"""
+        """Get the Win32 window handle"""
         hwnd = getattr(self._window, '_hwnd', None)
         if hwnd:
             return hwnd
-        # fallback: 通过标题查找
+        # fallback: find by window title
         try:
             import ctypes
             return ctypes.windll.user32.FindWindowW(None, self._window.title)

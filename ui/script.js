@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function setActiveButton(targetKey) {
     navBtns.forEach((b) => {
       const t = b.getAttribute("data-target");
-      // 将 data-target 映射为 page key 再比较
+      // Map data-target to page key for comparison
       const pageKey = t === "page-viz" ? "viewer" : t.replace(/^page-/, "");
       if (pageKey === targetKey) b.classList.add("active");
       else b.classList.remove("active");
@@ -60,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       // re-set innerHTML after extracting links to avoid duplicate tags
       app.innerHTML = html.replace(/<link[^>]+>/gi, "");
-      // 重新初始化动态加载内容中的 Lucide 图标
+      // Re-initialize Lucide icons in dynamically loaded content
       if (typeof lucide !== "undefined") lucide.createIcons();
       setActiveButton(key);
       _currentPage = key;
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window[initName]();
       }
     } catch (err) {
-      app.innerHTML = `<div style="padding:40px;color:#c0392b">页面加载失败: ${err.message}</div>`;
+      app.innerHTML = `<div style="padding:40px;color:#c0392b">Failed to load page: ${err.message}</div>`;
     }
   }
 
@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (uploadBtn)
       uploadBtn.addEventListener("click", () => {
         if (!window.pywebview) {
-          alert("请在 Pywebview 环境下运行！");
+          alert("Please run in the Pywebview environment!");
           return;
         }
         placeholder.style.display = "none";
@@ -213,9 +213,9 @@ document.addEventListener("DOMContentLoaded", () => {
               return;
             }
             if (res.error) {
-              errorMsg.textContent = "错误: " + res.error;
+              errorMsg.textContent = "Error: " + res.error;
               errorMsg.style.display = "block";
-              filePathDisplay.textContent = "读取失败";
+              filePathDisplay.textContent = "Failed to read";
               isFileLoaded = false;
             } else {
               isFileLoaded = true;
@@ -225,14 +225,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 slider.max = res.total_trajs - 1;
                 slider.value = 0;
                 indexLbl.textContent = "1";
-                totalLbl.textContent = `/ 共 ${res.total_trajs} 条`;
+                totalLbl.textContent = `/ ${res.total_trajs} total`;
                 updatePlot();
               }
             }
           })
           .catch((err) => {
             loading.style.display = "none";
-            errorMsg.textContent = "系统异常: " + err;
+            errorMsg.textContent = "System error: " + err;
             errorMsg.style.display = "block";
           });
       });
@@ -240,21 +240,21 @@ document.addEventListener("DOMContentLoaded", () => {
     if (saveBtn)
       saveBtn.addEventListener("click", () => {
         if (!isFileLoaded) {
-          alert("请先加载数据！");
+          alert("Please load data first!");
           return;
         }
         const params = getPlotParams();
         const originalText = saveBtn.innerHTML;
-        saveBtn.innerHTML = "<span>⏳</span> 保存中...";
+        saveBtn.innerHTML = "<span>⏳</span> Saving...";
         saveBtn.disabled = true;
         if (window.pywebview) {
           window.pywebview.api.save_plot(params).then((res) => {
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
             if (res.success) {
-              alert("保存成功！\n路径: " + res.path);
+              alert("Saved successfully!\nPath: " + res.path);
             } else if (res.error) {
-              alert("保存失败: " + res.error);
+              alert("Save failed: " + res.error);
             }
           });
         }

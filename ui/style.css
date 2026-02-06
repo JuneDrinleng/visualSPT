@@ -25,12 +25,12 @@ body {
   overflow: hidden;
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-size: 13px; /* 全局字体再小一点，显得更精致 */
+  font-size: 13px; /* Smaller global font for a more refined look */
 }
 
-/* --- 侧边栏 --- */
+/* --- Sidebar --- */
 .sidebar {
-  width: 150px; /* 宽度更紧凑 */
+  width: 150px; /* More compact width */
   background-color: var(--sidebar-bg);
   color: #ecf0f1;
   display: flex;
@@ -40,7 +40,7 @@ body {
 }
 
 .logo {
-  height: 40px; /* Logo区域压扁 */
+  height: 40px; /* Compressed logo area */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,14 +77,14 @@ body {
   border-left-color: var(--active-color);
 }
 
-/* --- 主内容区 --- */
+/* --- Main Content Area --- */
 .main-content {
   flex: 1;
-  padding: 0; /* 移除外围 Padding，让界面撑满 */
+  padding: 0; /* Remove outer padding, fill the area */
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background-color: #fff; /* 整体背景白 */
+  background-color: #fff; /* White background */
 }
 
 .page {
@@ -97,20 +97,20 @@ body {
   flex-direction: column;
 }
 
-/* 卡片容器 (现在充当整个页面容器) */
+/* Card container (serves as the entire page container) */
 .card {
   background: white;
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow: hidden;
-  border-radius: 0; /* 移除圆角，全屏风格 */
+  border-radius: 0; /* Remove rounded corners, fullscreen style */
   box-shadow: none;
 }
 
-/* 顶部标题栏 (极简模式) */
+/* Top title bar (minimalist mode) */
 .card-header {
-  height: 40px; /* 进一步压扁 */
+  height: 40px; /* Further compressed */
   padding: 0 15px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -132,24 +132,24 @@ body {
   gap: 10px;
 }
 
-/* --- 核心布局：左图右控 --- */
+/* --- Core layout: plot left, controls right --- */
 .viz-layout {
   display: flex;
   flex: 1;
   overflow: hidden;
   height: 100%;
-  min-height: 0; /* 关键：防止Flex子项溢出 */
+  min-height: 0; /* Key: prevent flex child overflow */
 }
 
-/* 左侧：绘图区 */
+/* Left side: plot area */
 .viz-left {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #fff; /* 纯白背景，与图片背景融合 */
+  background-color: #fff; /* Pure white background, blends with image */
   position: relative;
   min-width: 0;
-  min-height: 0; /* 关键 */
+  min-height: 0; /* Key */
 }
 
 #plot-container {
@@ -159,7 +159,7 @@ body {
   justify-content: center;
   position: relative;
   overflow: hidden;
-  padding: 0; /* 确保无内边距 */
+  padding: 0; /* Ensure no padding */
   width: 100%;
   height: 100%;
 }
@@ -167,11 +167,11 @@ body {
 #plot-image {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* 保持比例 */
-  display: none; /* 消除 inline 元素的底部空隙 */
+  object-fit: contain; /* Maintain aspect ratio */
+  display: none; /* Remove inline element bottom gap */
 }
 
-/* 占位符和Loading */
+/* Placeholder and Loading */
 .placeholder-box {
   color: #95a5a6;
   font-size: 0.9rem;
@@ -182,7 +182,7 @@ body {
   gap: 5px;
   height: 100%;
   width: 100%;
-  background-color: #fafafa; /* 没图的时候给个淡灰背景 */
+  background-color: #fafafa; /* Light gray background when no image */
 }
 #loading {
   display: none;
@@ -199,7 +199,7 @@ body {
   font-weight: 600;
 }
 
-/* 底部滑块控制条 (极简模式) */
+/* Bottom slider control bar (minimalist mode) */
 #control-panel {
   background: #fff;
   padding: 0 15px;
@@ -208,14 +208,14 @@ body {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  height: 36px; /* 极致压扁 */
+  height: 36px; /* Extremely compact */
   font-size: 0.8rem;
 }
 
 input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
-  height: 3px; /* 轨道更细 */
+  height: 3px; /* Thinner track */
   background: #dfe6e9;
   border-radius: 5px;
   outline: none;
@@ -229,7 +229,7 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--active-color);
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  margin-top: -4.5px; /* 垂直居中修正 */
+  margin-top: -4.5px; /* Vertical centering fix */
 }
 input[type="range"]::-webkit-slider-runnable-track {
   width: 100%;
@@ -239,9 +239,9 @@ input[type="range"]::-webkit-slider-runnable-track {
   border-radius: 5px;
 }
 
-/* --- 右侧：设置面板 --- */
+/* --- Right side: settings panel --- */
 .viz-right {
-  width: 220px; /* 宽度减小 */
+  width: 220px; /* Reduced width */
   background: #fcfcfc;
   border-left: 1px solid #e1e4e8;
   padding: 12px;
@@ -284,7 +284,7 @@ input[type="range"]::-webkit-slider-runnable-track {
   font-size: 0.8rem;
   border: 1px solid #ced4da;
   border-radius: 3px;
-  height: 24px; /* 输入框更矮 */
+  height: 24px; /* Shorter input */
   background: #fff;
 }
 .form-input:focus {
@@ -301,7 +301,7 @@ input[type="range"]::-webkit-slider-runnable-track {
   font-size: 0.8rem;
 }
 
-/* 开关样式 */
+/* Toggle switch style */
 .switch {
   position: relative;
   display: inline-block;
@@ -342,7 +342,7 @@ input:checked + .slider:before {
   transform: translateX(14px);
 }
 
-/* 按钮 */
+/* Button */
 .action-btn {
   background-color: var(--active-color);
   color: white;
@@ -359,7 +359,7 @@ input:checked + .slider:before {
   background-color: var(--active-hover);
 }
 
-/* 底部保存按钮 */
+/* Bottom save button */
 .action-area {
   margin-top: auto;
   padding-top: 10px;
@@ -388,7 +388,7 @@ input:checked + .slider:before {
   cursor: not-allowed;
 }
 #scale-input {
-  width: 100px; /* 设置一个固定的较小宽度 */
-  text-align: center; /* 让数字居中显示，看起来更专业 */
-  flex: none; /* 防止 Flex 布局将其强行拉伸 */
+  width: 100px; /* Fixed smaller width */
+  text-align: center; /* Center the number for a professional look */
+  flex: none; /* Prevent flex layout from stretching it */
 }

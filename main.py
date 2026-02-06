@@ -6,7 +6,7 @@ import time
 from server.api.core import Api
 import logging
 
-# PyInstaller 兼容：获取资源文件根目录
+# PyInstaller compatible: get resource file root directory
 if getattr(sys, 'frozen', False):
     _BASE_DIR = sys._MEIPASS
 else:
@@ -40,7 +40,7 @@ if _IS_WINDOWS:
         from ctypes import wintypes
 
         user32 = ctypes.windll.user32
-        # 选择正确的 64/32 位函数
+        # Select correct 64/32-bit function
         if ctypes.sizeof(ctypes.c_void_p) == 8:
             _SetWindowLongPtr = user32.SetWindowLongPtrW
             _GetWindowLongPtr = user32.GetWindowLongPtrW
@@ -121,16 +121,16 @@ def get_html_path():
     return os.path.join(_BASE_DIR, 'ui', 'index.html')
 
 def _enable_dwm_shadow(hwnd):
-    """通过 DWM API 为窗口添加系统阴影"""
+    """Add system shadow to window via DWM API"""
     try:
         dwmapi = ctypes.windll.dwmapi
 
         # DwmSetWindowAttribute(DWMWA_NCRENDERING_POLICY=2, DWMNCRP_ENABLED=2)
-        # 强制启用非客户区 DWM 渲染，这是阴影的前提
+        # Force enable non-client area DWM rendering, prerequisite for shadow
         policy = ctypes.c_int(2)
         dwmapi.DwmSetWindowAttribute(hwnd, 2, ctypes.byref(policy), ctypes.sizeof(policy))
 
-        # DwmExtendFrameIntoClientArea 扩展框架到客户区，触发 DWM 阴影
+        # DwmExtendFrameIntoClientArea extends frame into client area, triggers DWM shadow
         class MARGINS(ctypes.Structure):
             _fields_ = [
                 ('cxLeftWidth', ctypes.c_int),
@@ -141,21 +141,21 @@ def _enable_dwm_shadow(hwnd):
         m = MARGINS(1, 1, 1, 1)
         dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
 
-        # Windows 11 (build 22000+)：启用系统原生圆角
+        # Windows 11 (build 22000+): enable native rounded corners
         # DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2
         try:
             corner_pref = ctypes.c_int(2)
             dwmapi.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(corner_pref), ctypes.sizeof(corner_pref))
         except Exception:
-            pass  # Windows 10 不支持，忽略
+            pass  # Windows 10 does not support this, ignore
 
     except Exception as e:
         _tlog(f"[DWMShadow] error: {e}")
 
 def _subclass_window(hwnd):
-    """子类化窗口过程，实现：
-    1. WM_NCCALCSIZE → 返回0，隐藏标题栏/边框（保持无边框外观）
-    2. WM_ERASEBKGND → 返回1，阻止白色背景绘制（消除恢复时闪白）
+    """Subclass window procedure to implement:
+    1. WM_NCCALCSIZE -> return 0, hide title bar/border (maintain frameless appearance)
+    2. WM_ERASEBKGND -> return 1, prevent white background painting (eliminate flash on restore)
     """
     global _original_wndproc, _wndproc_ref
 
@@ -330,7 +330,7 @@ def _create_tray(window, quit_event):
         pass
 
 if __name__ == '__main__':
-    # 防止程序多开：使用 Windows 命名互斥体
+    # Prevent multiple instances: use Windows named mutex
     _mutex = None
     if _IS_WINDOWS:
         try:
@@ -338,7 +338,7 @@ if __name__ == '__main__':
             _mutex = kernel32.CreateMutexW(None, True, 'visualSPT_SingleInstance_Mutex')
             ERROR_ALREADY_EXISTS = 183
             if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
-                # 已有实例运行，尝试将其窗口激活后退出
+                # Another instance is running, try to activate its window and exit
                 _bring_window_to_front_by_title('visualSPT')
                 sys.exit(0)
         except Exception:

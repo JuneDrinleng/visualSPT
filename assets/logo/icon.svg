@@ -1,8 +1,8 @@
 <svg width="512" height="512" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <!-- 蓝色圆角背景 -->
+  <!-- Blue rounded background -->
   <rect x="0" y="0" width="100" height="100" rx="22" fill="#4f46e5" />
   
-  <!-- 轨迹折线 -->
+  <!-- Trajectory polyline -->
   <path d="M 20 75 L 35 45 L 55 60 L 65 30 L 80 40" 
         fill="none" 
         stroke="white" 
@@ -10,12 +10,12 @@
         stroke-linecap="round" 
         stroke-linejoin="round"/>
   
-  <!-- 关键节点 (半透明) -->
+  <!-- Key nodes (semi-transparent) -->
   <circle cx="20" cy="75" r="5" fill="white" fill-opacity="0.5" />
   <circle cx="35" cy="45" r="5" fill="white" fill-opacity="0.5" />
   <circle cx="55" cy="60" r="5" fill="white" fill-opacity="0.5" />
   <circle cx="65" cy="30" r="5" fill="white" fill-opacity="0.5" />
   
-  <!-- 终点 (黄色高亮) -->
+  <!-- Endpoint (yellow highlight) -->
   <circle cx="80" cy="40" r="7" fill="#FDE047" stroke="white" stroke-width="2" />
 </svg>

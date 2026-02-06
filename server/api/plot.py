@@ -115,7 +115,7 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
     except Exception as e:
         import traceback
         traceback.print_exc()
-        print(f"绘图出错: {e}")
+        print(f"Plot error: {e}")
         return ""
     finally:
         plt.close(fig)

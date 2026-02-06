@@ -48,7 +48,7 @@ body {
   font-size: 13px;
 }
 
-/* 圆角窗口容器 */
+/* Rounded window container */
 .window-frame {
   display: flex;
   flex-direction: column;
@@ -67,7 +67,7 @@ body {
   overflow: hidden;
 }
 
-/* --- 侧边栏 --- */
+/* --- Sidebar --- */
 .sidebar {
   width: 160px;
   background-color: var(--sidebar-bg);
@@ -125,7 +125,7 @@ body {
   border-left-color: var(--active-color);
 }
 
-/* --- 主内容区 --- */
+/* --- Main Content Area --- */
 .main-content {
   flex: 1;
   padding: 0;
