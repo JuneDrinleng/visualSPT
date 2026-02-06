@@ -260,4 +260,168 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
   };
+
+  // --- Per-page initializer: activate-traj (dynamic/activation visualization) ---
+  window.init_activate_traj = function () {
+    // reuse viewer wiring but call activation API
+    const root = document.getElementById("app");
+    const uploadBtn = root.querySelector("#uploadBtn");
+    const filePathDisplay = root.querySelector("#file-path-display");
+    const plotImg = root.querySelector("#plot-image");
+    const loading = root.querySelector("#loading");
+    const errorMsg = root.querySelector("#error-msg");
+    const placeholder = root.querySelector("#placeholder");
+
+    const controlPanel = root.querySelector("#control-panel");
+    const slider = root.querySelector("#traj-slider");
+    const indexLbl = root.querySelector("#traj-index-lbl");
+    const totalLbl = root.querySelector("#total-traj-lbl");
+
+    const scaleInput = root.querySelector("#scale-input");
+    const zeroStartSwitch = root.querySelector("#zero-start-switch");
+    const xUnitInput = root.querySelector("#x-unit-input");
+    const yUnitInput = root.querySelector("#y-unit-input");
+
+    const titleInput = root.querySelector("#title-input");
+    const markersSwitch = root.querySelector("#markers-switch");
+    const showTitleSwitch = root.querySelector("#show-title-switch");
+    const showAxisLabelsSwitch = root.querySelector("#show-axis-labels-switch");
+    const showGridSwitch = root.querySelector("#show-grid-switch");
+    const saveBtn = root.querySelector("#saveBtn");
+
+    let isFileLoaded = false;
+
+    function getPlotParams() {
+      return {
+        index: parseInt(slider.value) || 0,
+        scale: parseFloat(scaleInput.value) || 1.0,
+        zero_start: zeroStartSwitch.checked,
+        x_unit: xUnitInput.value || "px",
+        y_unit: yUnitInput.value || "px",
+        custom_title: titleInput ? titleInput.value : "",
+        show_markers: markersSwitch ? markersSwitch.checked : true,
+        show_title: showTitleSwitch ? showTitleSwitch.checked : true,
+        show_axis_labels: showAxisLabelsSwitch
+          ? showAxisLabelsSwitch.checked
+          : true,
+        show_grid: showGridSwitch ? showGridSwitch.checked : true,
+      };
+    }
+
+    function updatePlot() {
+      if (!isFileLoaded) return;
+      const params = getPlotParams();
+      indexLbl.textContent = params.index + 1;
+      if (window.pywebview) {
+        window.pywebview.api
+          .change_activation(
+            params.index,
+            params.scale,
+            params.zero_start,
+            params.x_unit,
+            params.y_unit,
+            params.custom_title,
+            params.show_markers,
+            params.show_title,
+            params.show_axis_labels,
+            params.show_grid,
+          )
+          .then((res) => {
+            if (res.image) {
+              plotImg.src = res.image;
+              errorMsg.style.display = "none";
+              plotImg.style.display = "block";
+            } else if (res.error) {
+              errorMsg.textContent = res.error;
+              errorMsg.style.display = "block";
+            }
+          });
+      }
+    }
+
+    // wire events (same wiring as viewer)
+    if (slider) {
+      slider.addEventListener("input", () => {
+        indexLbl.textContent = parseInt(slider.value) + 1;
+      });
+      slider.addEventListener("change", updatePlot);
+    }
+    if (scaleInput) scaleInput.addEventListener("change", updatePlot);
+    if (zeroStartSwitch) zeroStartSwitch.addEventListener("change", updatePlot);
+    if (xUnitInput) xUnitInput.addEventListener("change", updatePlot);
+    if (yUnitInput) yUnitInput.addEventListener("change", updatePlot);
+    if (titleInput) titleInput.addEventListener("change", updatePlot);
+    if (markersSwitch) markersSwitch.addEventListener("change", updatePlot);
+    if (showTitleSwitch) showTitleSwitch.addEventListener("change", updatePlot);
+    if (showAxisLabelsSwitch)
+      showAxisLabelsSwitch.addEventListener("change", updatePlot);
+    if (showGridSwitch) showGridSwitch.addEventListener("change", updatePlot);
+
+    if (uploadBtn)
+      uploadBtn.addEventListener("click", () => {
+        if (!window.pywebview) {
+          alert("请在 Pywebview 环境下运行！");
+          return;
+        }
+        placeholder.style.display = "none";
+        plotImg.style.display = "none";
+        errorMsg.style.display = "none";
+        loading.style.display = "block";
+
+        window.pywebview.api
+          .process_file_dialog()
+          .then((res) => {
+            loading.style.display = "none";
+            if (res.cancelled) {
+              if (!isFileLoaded) placeholder.style.display = "flex";
+              return;
+            }
+            if (res.error) {
+              errorMsg.textContent = "错误: " + res.error;
+              errorMsg.style.display = "block";
+              filePathDisplay.textContent = "读取失败";
+              isFileLoaded = false;
+            } else {
+              isFileLoaded = true;
+              filePathDisplay.textContent = res.file_path.split(/[/\\]/).pop();
+              if (res.total_trajs > 0) {
+                controlPanel.style.display = "flex";
+                slider.max = res.total_trajs - 1;
+                slider.value = 0;
+                indexLbl.textContent = "1";
+                totalLbl.textContent = `/ 共 ${res.total_trajs} 条`;
+                updatePlot();
+              }
+            }
+          })
+          .catch((err) => {
+            loading.style.display = "none";
+            errorMsg.textContent = "系统异常: " + err;
+            errorMsg.style.display = "block";
+          });
+      });
+
+    if (saveBtn)
+      saveBtn.addEventListener("click", () => {
+        if (!isFileLoaded) {
+          alert("请先加载数据！");
+          return;
+        }
+        const params = getPlotParams();
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = "<span>⏳</span> 保存中...";
+        saveBtn.disabled = true;
+        if (window.pywebview) {
+          window.pywebview.api.save_plot(params).then((res) => {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+            if (res.success) {
+              alert("保存成功！\n路径: " + res.path);
+            } else if (res.error) {
+              alert("保存失败: " + res.error);
+            }
+          });
+        }
+      });
+  };
 });

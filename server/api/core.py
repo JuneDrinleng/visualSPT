@@ -112,6 +112,20 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
+    def change_activation(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+        """接口：为 activate-traj 页面暴露的绘图方法（激活/动态可视化变体）。"""
+        self._ensure_libs()
+        try:
+            index = int(index)
+            scale = float(scale)
+            if 0 <= index < len(self.trajectories):
+                img = self._plot_activation_by_index(index, scale, zero_start, x_unit, y_unit, custom_title, show_markers, show_title, show_axis_labels, show_grid)
+                return {"image": img}
+            else:
+                return {"error": "Index out of range"}
+        except Exception as e:
+            return {"error": str(e)}
+
     def save_plot(self, options):
         self._ensure_libs()
         try:
@@ -224,3 +238,8 @@ class Api:
         traj = self.trajectories[index]
         x, y = api_plot.extract_xy(traj, self.pd, self.np)
         return api_plot.generate_plot(self.plt, self.np, x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)
+
+    def _plot_activation_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+        traj = self.trajectories[index]
+        x, y = api_plot.extract_xy(traj, self.pd, self.np)
+        return api_plot.generate_activation_plot(self.plt, self.np, x, y, title=f"Activation ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid)
