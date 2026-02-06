@@ -1,9 +1,16 @@
 import webview
 import os
+import sys
 import threading
 import time
 from server.api.core import Api
 import logging
+
+# PyInstaller 兼容：获取资源文件根目录
+if getattr(sys, 'frozen', False):
+    _BASE_DIR = sys._MEIPASS
+else:
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # optional tray support
 try:
@@ -111,8 +118,7 @@ if _IS_WINDOWS:
 
 def get_html_path():
     """get HTML file's absolute path"""
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(current_dir, 'ui', 'index.html')
+    return os.path.join(_BASE_DIR, 'ui', 'index.html')
 
 def _apply_rounded_corners(hwnd, radius=16):
     """通过 Win32 API 将窗口裁剪为圆角矩形"""
@@ -200,7 +206,7 @@ def _create_tray(window, quit_event):
     def _make_image():
         # 加载项目 logo 作为托盘图标
         try:
-            logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'logo', 'logo_transparent.png')
+            logo_path = os.path.join(_BASE_DIR, 'assets', 'logo', 'logo_transparent.png')
             img = Image.open(logo_path)
             img = img.resize((64, 64), Image.LANCZOS)
             return img
