@@ -2,3 +2,4 @@
 /dist
 *.pyc
 *.spec
+/test_data/output
