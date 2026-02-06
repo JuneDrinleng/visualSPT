@@ -18,6 +18,7 @@ class Api:
         self.plt = None
         self.read_trackmate_csv = None
         self.read_npy_traj = None 
+        self.read_npz_traj=None
 
         self.is_loading_libs = False
         self.libs_loaded = False
@@ -38,13 +39,14 @@ class Api:
             import matplotlib.pyplot as plt
             import pandas as pd
             import numpy as np
-            from server.tool.read_traj_file import read_trackmate_csv, read_npy_traj
+            from server.tool.read_traj_file import read_trackmate_csv, read_npy_traj,read_npz_traj
             
             self.plt = plt
             self.pd = pd
             self.np = np
             self.read_trackmate_csv = read_trackmate_csv
             self.read_npy_traj = read_npy_traj
+            self.read_npz_traj = read_npz_traj
 
             try:
                 fig = plt.figure()
@@ -93,6 +95,14 @@ class Api:
                 return {"file_path": file_path, "total_trajs": traj_number, "image": first_traj_img}
             elif file_path.endswith('.npy'):
                 traj_data, traj_number = self.read_npy_traj(file_path)
+                self.trajectories = traj_data
+                self.current_file = os.path.basename(file_path)
+                first_traj_img = ""
+                if traj_number > 0:
+                    first_traj_img = self._plot_trajectory_by_index(0)
+                return {"file_path": file_path, "total_trajs": traj_number, "image": first_traj_img}
+            elif file_path.endswith('.npz'):
+                traj_data, traj_number = self.read_npz_traj(file_path)
                 self.trajectories = traj_data
                 self.current_file = os.path.basename(file_path)
                 first_traj_img = ""
