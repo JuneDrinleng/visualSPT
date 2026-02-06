@@ -46,17 +46,11 @@ body {
   flex-direction: column;
   flex-shrink: 0;
   z-index: 10;
+  padding-top: 20px;
 }
 
 .logo {
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  font-weight: 700;
-  background: rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: none;
 }
 
 .nav-btn {
@@ -112,25 +106,29 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 10px;
+  padding: 0;
   background: #ffffff;
-  /* Removed border-bottom for a cleaner look */
   -webkit-user-select: none;
 }
 .titlebar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  width: 150px;
+  height: 100%;
+  background-color: var(--sidebar-bg);
+  flex-shrink: 0;
 }
 .app-title {
-  font-weight: 400;
-  color: #bdc3c7; /* Subtle grey */
-  font-size: 0.85rem;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #ecf0f1;
+  font-size: 1.1rem;
+  margin-top: 8px;
 }
 .titlebar-right {
   display: flex;
   gap: 4px;
+  padding-right: 10px;
 }
 .title-btn {
   width: 34px;
