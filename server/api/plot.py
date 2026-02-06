@@ -122,7 +122,7 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
         buf.close()
 
 
-def generate_activation_plot(plt, np, x, y, title='Activation Visualization', scale=1.0, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
+def generate_activation_plot(plt, np, x, y, title='Activation Visualization', scale=1.0, fps=20, zero_start=False, x_unit="px", y_unit="px", save_path=None, custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True):
     """A variant of trajectory plot suitable for dynamic/activation visualization.
     This renders the trajectory as colored scatter points with a fading trail.
     """
@@ -151,7 +151,10 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
         # trail length and fps defaults
         L = len(x)
         trail_len = max(1, L // 2)
-        fps = 20
+        try:
+            fps = int(fps)
+        except Exception:
+            fps = 20
 
         # figure setup: center around origin similar to attachment
         max_abs_x = np.max(np.abs(x))

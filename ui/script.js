@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const indexLbl = root.querySelector("#traj-index-lbl");
     const totalLbl = root.querySelector("#total-traj-lbl");
 
-    const scaleInput = root.querySelector("#scale-input");
+    const fpsInput = root.querySelector("#fps-input");
     const zeroStartSwitch = root.querySelector("#zero-start-switch");
     const xUnitInput = root.querySelector("#x-unit-input");
     const yUnitInput = root.querySelector("#y-unit-input");
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function getPlotParams() {
       return {
         index: parseInt(slider.value) || 0,
-        scale: parseFloat(scaleInput.value) || 1.0,
+        fps: parseInt(fpsInput.value) || 20,
         zero_start: zeroStartSwitch.checked,
         x_unit: xUnitInput.value || "px",
         y_unit: yUnitInput.value || "px",
@@ -149,6 +149,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const params = getPlotParams();
       indexLbl.textContent = params.index + 1;
       if (window.pywebview) {
+        // show loading indicator while backend generates the image
+        loading.style.display = "block";
+        plotImg.style.display = "none";
+        errorMsg.style.display = "none";
         window.pywebview.api
           .change_trajectory(
             params.index,
@@ -163,6 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
             params.show_grid,
           )
           .then((res) => {
+            loading.style.display = "none";
             if (res.image) {
               plotImg.src = res.image;
               errorMsg.style.display = "none";
@@ -171,6 +176,11 @@ document.addEventListener("DOMContentLoaded", () => {
               errorMsg.textContent = res.error;
               errorMsg.style.display = "block";
             }
+          })
+          .catch((err) => {
+            loading.style.display = "none";
+            errorMsg.textContent = "系统异常: " + err;
+            errorMsg.style.display = "block";
           });
       }
     }
@@ -313,10 +323,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const params = getPlotParams();
       indexLbl.textContent = params.index + 1;
       if (window.pywebview) {
+        // show loading indicator while backend generates the animation
+        loading.style.display = "block";
+        plotImg.style.display = "none";
+        errorMsg.style.display = "none";
         window.pywebview.api
           .change_activation(
             params.index,
-            params.scale,
+            1.0, // keep scale default for activation
+            params.fps,
             params.zero_start,
             params.x_unit,
             params.y_unit,
@@ -327,6 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
             params.show_grid,
           )
           .then((res) => {
+            loading.style.display = "none";
             if (res.image) {
               plotImg.src = res.image;
               errorMsg.style.display = "none";
@@ -335,6 +351,11 @@ document.addEventListener("DOMContentLoaded", () => {
               errorMsg.textContent = res.error;
               errorMsg.style.display = "block";
             }
+          })
+          .catch((err) => {
+            loading.style.display = "none";
+            errorMsg.textContent = "系统异常: " + err;
+            errorMsg.style.display = "block";
           });
       }
     }
