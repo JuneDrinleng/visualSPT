@@ -31,12 +31,12 @@ VSVersionInfo(
           [
             StringStruct(u'CompanyName', u'June Drinleng'),
             StringStruct(u'FileDescription', u'A tool for visualizing the data of single particle tracking data'),
-            StringStruct(u'FileVersion', u'1.0.0.0'),
+            StringStruct(u'FileVersion', u'1.1.0.0'),
             StringStruct(u'InternalName', u'visualSPT'),
             StringStruct(u'LegalCopyright', u'Copyright (C) 2026 June Drinleng. All rights reserved.'),
             StringStruct(u'OriginalFilename', u'visualSPT.exe'),
             StringStruct(u'ProductName', u'visualSPT'),
-            StringStruct(u'ProductVersion', u'1.0.0.0'),
+            StringStruct(u'ProductVersion', u'1.1.0.0'),
           ]
         )
       ]

@@ -23,7 +23,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function setActiveButton(targetKey) {
     navBtns.forEach((b) => {
       const t = b.getAttribute("data-target");
-      if (t === targetKey) b.classList.add("active");
+      // 将 data-target 映射为 page key 再比较
+      const pageKey = t === "page-viz" ? "viewer" : t.replace(/^page-/, "");
+      if (pageKey === targetKey) b.classList.add("active");
       else b.classList.remove("active");
     });
   }
