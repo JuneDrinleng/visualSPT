@@ -1,0 +1,131 @@
+:root {
+  --bg-color: #f0f2f5;
+  --sidebar-bg: #2c3e50;
+  --active-color: #3498db;
+  --active-hover: #2980b9;
+  --text-color: #2c3e50;
+  --border-color: #e1e4e8;
+  --panel-bg: #f8f9fa;
+  --input-border: #ced4da;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  outline: none;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-size: 13px;
+}
+
+/* --- 侧边栏 --- */
+.sidebar {
+  width: 150px;
+  background-color: var(--sidebar-bg);
+  color: #ecf0f1;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.logo {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: #bdc3c7;
+  padding: 10px 15px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 3px solid transparent;
+}
+
+.nav-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.nav-btn.active {
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #fff;
+  border-left-color: var(--active-color);
+}
+
+/* --- 主内容区 --- */
+.main-content {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+}
+
+.page {
+  display: none;
+  height: 100%;
+  width: 100%;
+}
+.page.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: white;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.card-header {
+  height: 40px;
+  padding: 0 15px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.card-header h1 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.upload-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

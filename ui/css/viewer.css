@@ -1,0 +1,248 @@
+/* Viewer-specific styles: left plot, right controls, sliders, buttons */
+
+.viz-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+}
+
+.viz-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+#plot-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#plot-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: none;
+}
+
+.placeholder-box {
+  color: #95a5a6;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 100%;
+  width: 100%;
+  background-color: #fafafa;
+}
+
+#loading {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 5;
+  color: var(--active-color);
+  font-weight: 600;
+}
+
+#control-panel {
+  background: #fff;
+  padding: 0 15px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  height: 36px;
+  font-size: 0.8rem;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 3px;
+  background: #dfe6e9;
+  border-radius: 5px;
+  outline: none;
+  flex: 1;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--active-color);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  margin-top: -4.5px;
+}
+
+.viz-right {
+  width: 220px;
+  background: #fcfcfc;
+  border-left: 1px solid #e1e4e8;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #34495e;
+  margin-bottom: 2px;
+  padding-left: 6px;
+  border-left: 3px solid #3498db;
+  line-height: 1.2;
+}
+
+.setting-group {
+  background: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.setting-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.form-input {
+  width: 100%;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+  height: 24px;
+  background: #fff;
+}
+.form-input:focus {
+  border-color: var(--active-color);
+}
+
+.unit-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.unit-separator {
+  color: #adb5bd;
+  font-size: 0.8rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 16px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  bottom: 2px;
+  background: #fff;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: var(--active-color);
+}
+input:checked + .slider:before {
+  transform: translateX(14px);
+}
+
+.action-btn {
+  background-color: var(--active-color);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.action-btn:hover {
+  background-color: var(--active-hover);
+}
+
+.action-area {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+.btn-save {
+  width: 100%;
+  padding: 6px;
+  background: #2ecc71;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.btn-save:hover {
+  background: #27ae60;
+}
+.btn-save:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+#scale-input {
+  width: 100px;
+  text-align: center;
+  flex: none;
+}
