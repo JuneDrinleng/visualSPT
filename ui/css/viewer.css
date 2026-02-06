@@ -241,8 +241,18 @@ input:checked + .slider:before {
   padding-top: 10px;
   border-top: 1px solid #eee;
 }
+.save-hint {
+  margin: 0 0 6px 0;
+  font-size: 0.72rem;
+  color: #999;
+  text-align: center;
+}
+.save-btn-row {
+  display: flex;
+  gap: 6px;
+}
 .btn-save {
-  width: 100%;
+  flex: 1;
   padding: 7px;
   background: var(--active-color);
   color: #fff;
@@ -256,13 +266,43 @@ input:checked + .slider:before {
   justify-content: center;
   gap: 6px;
   transition: background-color 0.15s ease;
+  position: relative;
+  overflow: hidden;
 }
 .btn-save:hover {
   background: var(--active-hover);
 }
 .btn-save:disabled {
-  background: #cbd5e1;
   cursor: not-allowed;
+}
+.btn-batch {
+  background: var(--active-color);
+}
+.btn-batch:hover {
+  background: var(--active-hover);
+}
+.btn-batch .batch-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--active-hover);
+  transition: width 0.2s ease;
+  z-index: 0;
+}
+.btn-batch .batch-label {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-batch:disabled {
+  background: var(--active-color);
+}
+.btn-batch:disabled .batch-progress {
+  background: var(--active-hover);
 }
 #scale-input {
   width: 100px;

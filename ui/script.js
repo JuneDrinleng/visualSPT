@@ -128,6 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const showTicksSwitch = root.querySelector("#show-ticks-switch");
     const showBorderSwitch = root.querySelector("#show-border-switch");
     const saveBtn = root.querySelector("#saveBtn");
+    const batchSaveBtn = root.querySelector("#batchSaveBtn");
 
     let isFileLoaded = false;
 
@@ -285,14 +286,66 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
       });
+
+    if (batchSaveBtn)
+      batchSaveBtn.addEventListener("click", () => {
+        if (!isFileLoaded) {
+          alert("Please load data first!");
+          return;
+        }
+        if (!window.pywebview) return;
+        const params = getPlotParams();
+        const totalTrajs = parseInt(slider.max) + 1;
+        const progressBar = batchSaveBtn.querySelector(".batch-progress");
+        const batchLabel = batchSaveBtn.querySelector(".batch-label");
+        // Ask backend for folder selection
+        window.pywebview.api.select_folder().then((folderRes) => {
+          if (!folderRes || folderRes.cancelled) return;
+          const folder = folderRes.path;
+          batchSaveBtn.disabled = true;
+          progressBar.style.width = "0%";
+          let completed = 0;
+          // Sequential batch save
+          function saveNext(idx) {
+            if (idx >= totalTrajs) {
+              batchLabel.innerHTML =
+                '<i data-lucide="files" class="icon-btn"></i> Batch';
+              if (typeof lucide !== "undefined") lucide.createIcons();
+              progressBar.style.width = "0%";
+              batchSaveBtn.disabled = false;
+              alert(
+                "Batch save complete!\n" +
+                  totalTrajs +
+                  " files saved to:\n" +
+                  folder,
+              );
+              return;
+            }
+            const p = Object.assign({}, params, { index: idx });
+            window.pywebview.api
+              .batch_save_single_plot(folder, p)
+              .then((res) => {
+                completed++;
+                const pct = (completed / totalTrajs) * 100;
+                progressBar.style.width = pct + "%";
+                saveNext(idx + 1);
+              })
+              .catch(() => {
+                completed++;
+                saveNext(idx + 1);
+              });
+          }
+          saveNext(0);
+        });
+      });
   };
 
   // --- Per-page initializer: activate-traj (dynamic/activation visualization) ---
   window.init_activate_traj = function () {
-    // reuse viewer wiring but call activation API
     const root = document.getElementById("app");
     const uploadBtn = root.querySelector("#uploadBtn");
     const filePathDisplay = root.querySelector("#file-path-display");
+    const canvas = root.querySelector("#anim-canvas");
     const plotImg = root.querySelector("#plot-image");
     const loading = root.querySelector("#loading");
     const errorMsg = root.querySelector("#error-msg");
@@ -302,6 +355,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const slider = root.querySelector("#traj-slider");
     const indexLbl = root.querySelector("#traj-index-lbl");
     const totalLbl = root.querySelector("#total-traj-lbl");
+
+    const animControls = root.querySelector("#anim-controls");
+    const playPauseBtn = root.querySelector("#play-pause-btn");
+    const frameLbl = root.querySelector("#frame-lbl");
+    const frameSlider = root.querySelector("#frame-slider");
 
     const scaleInput = root.querySelector("#scale-input");
     const unitInput = root.querySelector("#unit-input");
@@ -315,25 +373,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const showAxisLabelsSwitch = root.querySelector("#show-axis-labels-switch");
     const showGridSwitch = root.querySelector("#show-grid-switch");
     const saveBtn = root.querySelector("#saveBtn");
+    const batchSaveBtn = root.querySelector("#batchSaveBtn");
 
     let isFileLoaded = false;
 
-    function getPlotParams() {
+    // --- Canvas animation state ---
+    let trajX = [];
+    let trajY = [];
+    let trajLen = 0;
+    let animFrame = 0;
+    let animPlaying = false;
+    let animRAF = null;
+    let lastFrameTime = 0;
+
+    function getAnimParams() {
       const unit = unitInput ? unitInput.value || "px" : "px";
       return {
-        index: parseInt(slider.value) || 0,
-        scale: scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0,
         fps: fpsInput ? parseInt(fpsInput.value) || 20 : 20,
         trail_len:
           trailLenInput && trailLenInput.value
             ? parseInt(trailLenInput.value)
             : 0,
-        zero_start: zeroStartSwitch ? zeroStartSwitch.checked : false,
         x_unit: unit,
         y_unit: unit,
-        custom_title: titleInput ? titleInput.value : "",
         show_timebar: timebarSwitch ? timebarSwitch.checked : true,
-        show_title: showTitleSwitch ? showTitleSwitch.checked : true,
         show_axis_labels: showAxisLabelsSwitch
           ? showAxisLabelsSwitch.checked
           : true,
@@ -341,67 +404,382 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    function updatePlot() {
-      if (!isFileLoaded) return;
-      const params = getPlotParams();
-      indexLbl.textContent = params.index + 1;
-      if (window.pywebview) {
-        // show loading indicator while backend generates the animation
-        loading.style.display = "block";
-        plotImg.style.display = "none";
-        errorMsg.style.display = "none";
-        window.pywebview.api
-          .change_activation(
-            params.index,
-            params.scale,
-            params.fps,
-            params.trail_len,
-            params.zero_start,
-            params.x_unit,
-            params.y_unit,
-            params.custom_title,
-            params.show_timebar,
-            params.show_title,
-            params.show_axis_labels,
-            params.show_grid,
-          )
-          .then((res) => {
-            loading.style.display = "none";
-            if (res.image) {
-              plotImg.src = res.image;
-              errorMsg.style.display = "none";
-              plotImg.style.display = "block";
-            } else if (res.error) {
-              errorMsg.textContent = res.error;
-              errorMsg.style.display = "block";
-            }
-          })
-          .catch((err) => {
-            loading.style.display = "none";
-            errorMsg.textContent = "System error: " + err;
-            errorMsg.style.display = "block";
-          });
+    // --- Coolwarm color interpolation (blue → white → red) ---
+    function coolwarmColor(t) {
+      // t in [0,1]: 0=blue(cold), 0.5=light gray, 1=red(warm)
+      const r =
+        t < 0.5
+          ? Math.round(59 + t * 2 * (221 - 59))
+          : Math.round(221 + (t - 0.5) * 2 * (180 - 221));
+      const g =
+        t < 0.5
+          ? Math.round(76 + t * 2 * (221 - 76))
+          : Math.round(221 + (t - 0.5) * 2 * (4 - 221));
+      const b =
+        t < 0.5
+          ? Math.round(192 + t * 2 * (221 - 192))
+          : Math.round(221 + (t - 0.5) * 2 * (38 - 221));
+      return `rgb(${Math.max(0, Math.min(255, r))},${Math.max(0, Math.min(255, g))},${Math.max(0, Math.min(255, b))})`;
+    }
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      const container = canvas.parentElement;
+      const dpr = window.devicePixelRatio || 1;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
+    }
+
+    function drawFrame(frame, targetCanvas, dprOverride) {
+      const c = targetCanvas || canvas;
+      if (!c || trajLen < 2) return;
+      const params = getAnimParams();
+      const ctx = c.getContext("2d");
+      const dpr =
+        dprOverride || (targetCanvas ? 1 : window.devicePixelRatio || 1);
+      const W = c.width;
+      const H = c.height;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, W, H);
+
+      // compute data bounds
+      let maxAbsX = 0,
+        maxAbsY = 0;
+      for (let i = 0; i < trajLen; i++) {
+        const ax = Math.abs(trajX[i]);
+        const ay = Math.abs(trajY[i]);
+        if (ax > maxAbsX) maxAbsX = ax;
+        if (ay > maxAbsY) maxAbsY = ay;
+      }
+      const dataLimit = Math.max(maxAbsX, maxAbsY) * 1.1 || 1;
+
+      // plot area with padding
+      const timebarH = params.show_timebar ? 30 * dpr : 0;
+      const labelPad = params.show_axis_labels ? 40 * dpr : 10 * dpr;
+      const pad = labelPad;
+      const plotW = W - pad * 2;
+      const plotH = H - pad * 2 - timebarH;
+      const plotSize = Math.min(plotW, plotH);
+      const ox = (W - plotSize) / 2;
+      const oy = (H - plotSize - timebarH) / 2;
+
+      function toCanvasX(dx) {
+        return ox + (dx / dataLimit + 1) * 0.5 * plotSize;
+      }
+      function toCanvasY(dy) {
+        return oy + (1 - (dy / dataLimit + 1) * 0.5) * plotSize;
+      }
+
+      // grid lines
+      if (params.show_grid) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(128,128,128,0.25)";
+        ctx.lineWidth = 1 * dpr;
+        ctx.setLineDash([4 * dpr, 4 * dpr]);
+        // horizontal zero
+        const zeroY = toCanvasY(0);
+        ctx.beginPath();
+        ctx.moveTo(ox, zeroY);
+        ctx.lineTo(ox + plotSize, zeroY);
+        ctx.stroke();
+        // vertical zero
+        const zeroX = toCanvasX(0);
+        ctx.beginPath();
+        ctx.moveTo(zeroX, oy);
+        ctx.lineTo(zeroX, oy + plotSize);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // axis labels and tick marks
+      if (params.show_axis_labels) {
+        ctx.save();
+        const fontSize = Math.round(7 * dpr);
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.fillStyle = "rgba(128,128,128,0.6)";
+
+        const limitVal = dataLimit.toFixed(2);
+        const tickLen = plotSize * 0.015;
+        const zeroY2 = toCanvasY(0);
+        const zeroX2 = toCanvasX(0);
+        const xTickPos = toCanvasX(dataLimit / 1.1);
+        const xTickNeg = toCanvasX(-dataLimit / 1.1);
+        const yTickPos = toCanvasY(dataLimit / 1.1);
+        const yTickNeg = toCanvasY(-dataLimit / 1.1);
+
+        ctx.strokeStyle = "rgba(128,128,128,0.8)";
+        ctx.lineWidth = 1.5 * dpr;
+        ctx.setLineDash([]);
+
+        // X axis ticks: only draw upward from zero line (zeroY2 - tickLen to zeroY2)
+        ctx.beginPath();
+        ctx.moveTo(xTickPos, zeroY2 - tickLen);
+        ctx.lineTo(xTickPos, zeroY2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(xTickNeg, zeroY2 - tickLen);
+        ctx.lineTo(xTickNeg, zeroY2);
+        ctx.stroke();
+
+        // X axis labels: centered below tick, just under the zero line
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(
+          `${limitVal} ${params.x_unit}`,
+          xTickPos,
+          zeroY2 + 3 * dpr,
+        );
+        ctx.fillText(
+          `-${limitVal} ${params.x_unit}`,
+          xTickNeg,
+          zeroY2 + 3 * dpr,
+        );
+
+        // Y axis ticks: only draw rightward from zero line (zeroX2 to zeroX2 + tickLen)
+        ctx.beginPath();
+        ctx.moveTo(zeroX2, yTickPos);
+        ctx.lineTo(zeroX2 + tickLen, yTickPos);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(zeroX2, yTickNeg);
+        ctx.lineTo(zeroX2 + tickLen, yTickNeg);
+        ctx.stroke();
+
+        // Y axis labels: right-aligned, to the left of the zero line near tick
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText(
+          `${limitVal} ${params.y_unit}`,
+          zeroX2 - 4 * dpr,
+          yTickPos,
+        );
+        ctx.fillText(
+          `-${limitVal} ${params.y_unit}`,
+          zeroX2 - 4 * dpr,
+          yTickNeg,
+        );
+
+        ctx.restore();
+      }
+
+      // trail
+      let trailLen =
+        params.trail_len > 0
+          ? Math.min(params.trail_len, trajLen)
+          : Math.max(1, Math.floor(trajLen / 2));
+      const start = Math.max(0, frame - trailLen);
+      const end = frame + 1;
+      if (end - start > 1) {
+        const segCount = end - start - 1;
+        ctx.lineWidth = 3 * dpr;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        for (let i = 0; i < segCount; i++) {
+          const idx = start + i;
+          const t = segCount > 1 ? i / (segCount - 1) : 1;
+          ctx.strokeStyle = coolwarmColor(t);
+          ctx.beginPath();
+          ctx.moveTo(toCanvasX(trajX[idx]), toCanvasY(trajY[idx]));
+          ctx.lineTo(toCanvasX(trajX[idx + 1]), toCanvasY(trajY[idx + 1]));
+          ctx.stroke();
+        }
+      }
+
+      // particle
+      const px = toCanvasX(trajX[frame]);
+      const py = toCanvasY(trajY[frame]);
+      ctx.beginPath();
+      ctx.arc(px, py, 5 * dpr, 0, Math.PI * 2);
+      ctx.fillStyle = "#ef4444";
+      ctx.fill();
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.strokeStyle = "#fff";
+      ctx.stroke();
+
+      // timebar
+      if (params.show_timebar) {
+        const barY =
+          oy + plotSize + (params.show_axis_labels ? 22 * dpr : 8 * dpr);
+        const barH = 8 * dpr;
+        const barW = (plotSize * 3) / 4;
+        const barX = ox + (plotSize - barW) / 2;
+        // background
+        for (let i = 0; i < barW; i++) {
+          ctx.fillStyle = coolwarmColor(i / barW);
+          ctx.fillRect(barX + i, barY, 1, barH);
+        }
+        // border
+        ctx.strokeStyle = "#aaa";
+        ctx.lineWidth = 0.6 * dpr;
+        ctx.strokeRect(barX, barY, barW, barH);
+        // progress indicator
+        const progX = barX + (frame / Math.max(1, trajLen - 1)) * barW;
+        ctx.beginPath();
+        ctx.moveTo(progX, barY - 2 * dpr);
+        ctx.lineTo(progX, barY + barH + 2 * dpr);
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 1.5 * dpr;
+        ctx.stroke();
+        // label
+        const fontSize2 = Math.round(7 * dpr);
+        ctx.font = `italic 600 ${fontSize2}px sans-serif`;
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          `Trail: ${trailLen} frames`,
+          barX + barW / 2,
+          barY - 4 * dpr,
+        );
+      }
+
+      // update frame label
+      if (frameLbl) frameLbl.textContent = `${frame + 1} / ${trajLen}`;
+      if (frameSlider) frameSlider.value = frame;
+    }
+
+    function animLoop(ts) {
+      if (!animPlaying) return;
+      const params = getAnimParams();
+      const interval = 1000 / params.fps;
+      if (ts - lastFrameTime >= interval) {
+        lastFrameTime = ts;
+        animFrame++;
+        if (animFrame >= trajLen) animFrame = 0;
+        drawFrame(animFrame);
+      }
+      animRAF = requestAnimationFrame(animLoop);
+    }
+
+    function startAnim() {
+      if (trajLen < 2) return;
+      animPlaying = true;
+      if (playPauseBtn) playPauseBtn.textContent = "⏸";
+      lastFrameTime = performance.now();
+      animRAF = requestAnimationFrame(animLoop);
+    }
+
+    function stopAnim() {
+      animPlaying = false;
+      if (playPauseBtn) playPauseBtn.textContent = "▶";
+      if (animRAF) {
+        cancelAnimationFrame(animRAF);
+        animRAF = null;
       }
     }
 
-    // wire events (same wiring as viewer)
+    function loadTrajectoryData(index) {
+      if (!window.pywebview) return;
+      const scale = scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
+      const zeroStart = zeroStartSwitch ? zeroStartSwitch.checked : false;
+      loading.style.display = "block";
+      canvas.style.display = "none";
+
+      window.pywebview.api
+        .get_trajectory_data(index, scale, zeroStart)
+        .then((res) => {
+          loading.style.display = "none";
+          if (res.error) {
+            errorMsg.textContent = res.error;
+            errorMsg.style.display = "block";
+            return;
+          }
+          trajX = res.x;
+          trajY = res.y;
+          trajLen = res.length;
+          animFrame = 0;
+
+          if (trajLen < 2) {
+            errorMsg.textContent = "Trajectory too short to animate";
+            errorMsg.style.display = "block";
+            return;
+          }
+
+          resizeCanvas();
+          canvas.style.display = "block";
+          errorMsg.style.display = "none";
+
+          // setup frame slider
+          if (frameSlider) {
+            frameSlider.max = trajLen - 1;
+            frameSlider.value = 0;
+          }
+          if (animControls) animControls.style.display = "flex";
+
+          drawFrame(0);
+          startAnim();
+        })
+        .catch((err) => {
+          loading.style.display = "none";
+          errorMsg.textContent = "Error: " + err;
+          errorMsg.style.display = "block";
+        });
+    }
+
+    // play/pause button
+    if (playPauseBtn) {
+      playPauseBtn.addEventListener("click", () => {
+        if (animPlaying) stopAnim();
+        else startAnim();
+      });
+    }
+
+    // frame slider scrubbing
+    if (frameSlider) {
+      frameSlider.addEventListener("input", () => {
+        stopAnim();
+        animFrame = parseInt(frameSlider.value) || 0;
+        drawFrame(animFrame);
+      });
+    }
+
+    // resize observer
+    const ro = new ResizeObserver(() => {
+      if (canvas.style.display !== "none") {
+        resizeCanvas();
+        drawFrame(animFrame);
+      }
+    });
+    if (canvas && canvas.parentElement) ro.observe(canvas.parentElement);
+
+    // when visual params change (not data), just redraw without re-fetching
+    function onVisualChange() {
+      if (trajLen > 0) drawFrame(animFrame);
+    }
+    if (fpsInput) fpsInput.addEventListener("change", onVisualChange);
+    if (trailLenInput) trailLenInput.addEventListener("change", onVisualChange);
+    if (timebarSwitch) timebarSwitch.addEventListener("change", onVisualChange);
+    if (showAxisLabelsSwitch)
+      showAxisLabelsSwitch.addEventListener("change", onVisualChange);
+    if (showGridSwitch)
+      showGridSwitch.addEventListener("change", onVisualChange);
+
+    // when data-affecting params change, re-fetch data
+    function onDataChange() {
+      if (!isFileLoaded) return;
+      stopAnim();
+      loadTrajectoryData(parseInt(slider.value) || 0);
+    }
+    if (scaleInput) scaleInput.addEventListener("change", onDataChange);
+    if (unitInput) unitInput.addEventListener("change", onVisualChange);
+    if (zeroStartSwitch)
+      zeroStartSwitch.addEventListener("change", onDataChange);
+
+    // wire trajectory slider
     if (slider) {
       slider.addEventListener("input", () => {
         indexLbl.textContent = parseInt(slider.value) + 1;
       });
-      slider.addEventListener("change", updatePlot);
+      slider.addEventListener("change", () => {
+        stopAnim();
+        loadTrajectoryData(parseInt(slider.value) || 0);
+      });
     }
-    if (scaleInput) scaleInput.addEventListener("change", updatePlot);
-    if (unitInput) unitInput.addEventListener("change", updatePlot);
-    if (fpsInput) fpsInput.addEventListener("change", updatePlot);
-    if (trailLenInput) trailLenInput.addEventListener("change", updatePlot);
-    if (zeroStartSwitch) zeroStartSwitch.addEventListener("change", updatePlot);
-    if (titleInput) titleInput.addEventListener("change", updatePlot);
-    if (timebarSwitch) timebarSwitch.addEventListener("change", updatePlot);
-    if (showTitleSwitch) showTitleSwitch.addEventListener("change", updatePlot);
-    if (showAxisLabelsSwitch)
-      showAxisLabelsSwitch.addEventListener("change", updatePlot);
-    if (showGridSwitch) showGridSwitch.addEventListener("change", updatePlot);
 
     if (uploadBtn)
       uploadBtn.addEventListener("click", () => {
@@ -410,9 +788,10 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
         placeholder.style.display = "none";
-        plotImg.style.display = "none";
+        canvas.style.display = "none";
         errorMsg.style.display = "none";
         loading.style.display = "block";
+        stopAnim();
 
         window.pywebview.api
           .process_file_dialog()
@@ -436,7 +815,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 slider.value = 0;
                 indexLbl.textContent = "1";
                 totalLbl.textContent = `/ ${res.total_trajs} total`;
-                updatePlot();
+                loadTrajectoryData(0);
               }
             }
           })
@@ -449,25 +828,141 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (saveBtn)
       saveBtn.addEventListener("click", () => {
+        if (!isFileLoaded || trajLen < 2) {
+          alert("Please load data first!");
+          return;
+        }
+        if (!window.pywebview) return;
+        const fps = fpsInput ? parseInt(fpsInput.value) || 20 : 20;
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = "<span>⏳</span> Saving...";
+        saveBtn.disabled = true;
+        // Ask for save path first
+        window.pywebview.api
+          .select_gif_save_path(parseInt(slider.value) || 0)
+          .then((pathRes) => {
+            if (!pathRes || pathRes.cancelled) {
+              saveBtn.innerHTML = originalText;
+              saveBtn.disabled = false;
+              return;
+            }
+            const savePath = pathRes.path;
+            // Render all frames on offscreen canvas without affecting preview
+            const gifScale = 2;
+            const baseW = canvas.width / (window.devicePixelRatio || 1);
+            const baseH = canvas.height / (window.devicePixelRatio || 1);
+            const offscreen = document.createElement("canvas");
+            offscreen.width = Math.round(baseW * gifScale);
+            offscreen.height = Math.round(baseH * gifScale);
+            const frames = [];
+            for (let fi = 0; fi < trajLen; fi++) {
+              drawFrame(fi, offscreen, gifScale);
+              frames.push(offscreen.toDataURL("image/png"));
+            }
+            window.pywebview.api
+              .save_canvas_gif(savePath, frames, fps)
+              .then((res) => {
+                saveBtn.innerHTML = originalText;
+                saveBtn.disabled = false;
+                if (res.success) {
+                  alert("Saved successfully!\nPath: " + res.path);
+                } else if (res.error) {
+                  alert("Save failed: " + res.error);
+                }
+              });
+          });
+      });
+
+    if (batchSaveBtn)
+      batchSaveBtn.addEventListener("click", () => {
         if (!isFileLoaded) {
           alert("Please load data first!");
           return;
         }
-        const params = getPlotParams();
-        const originalText = saveBtn.innerHTML;
-        saveBtn.innerHTML = "<span>⏳</span> Saving...";
-        saveBtn.disabled = true;
-        if (window.pywebview) {
-          window.pywebview.api.save_plot(params).then((res) => {
-            saveBtn.innerHTML = originalText;
-            saveBtn.disabled = false;
-            if (res.success) {
-              alert("Saved successfully!\nPath: " + res.path);
-            } else if (res.error) {
-              alert("Save failed: " + res.error);
+        if (!window.pywebview) return;
+        const totalTrajs = parseInt(slider.max) + 1;
+        const scale = scaleInput ? parseFloat(scaleInput.value) || 1.0 : 1.0;
+        const zeroStart = zeroStartSwitch ? zeroStartSwitch.checked : false;
+        const progressBar = batchSaveBtn.querySelector(".batch-progress");
+        const batchLabel = batchSaveBtn.querySelector(".batch-label");
+        window.pywebview.api.select_folder().then((folderRes) => {
+          if (!folderRes || folderRes.cancelled) return;
+          const folder = folderRes.path;
+          batchSaveBtn.disabled = true;
+          progressBar.style.width = "0%";
+          batchLabel.textContent = "0 / " + totalTrajs;
+          let completed = 0;
+          const hiresScale = 3;
+          const baseW = canvas.width / (window.devicePixelRatio || 1);
+          const baseH = canvas.height / (window.devicePixelRatio || 1);
+          // Sequential batch: fetch data, render all frames, save as GIF
+          function saveNext(idx) {
+            if (idx >= totalTrajs) {
+              batchLabel.innerHTML =
+                '<i data-lucide="files" class="icon-btn"></i> Batch';
+              if (typeof lucide !== "undefined") lucide.createIcons();
+              progressBar.style.width = "0%";
+              batchSaveBtn.disabled = false;
+              alert(
+                "Batch save complete!\n" +
+                  totalTrajs +
+                  " files saved to:\n" +
+                  folder,
+              );
+              return;
             }
-          });
-        }
+            window.pywebview.api
+              .get_trajectory_data(idx, scale, zeroStart)
+              .then((res) => {
+                if (res.error || res.length < 2) {
+                  completed++;
+                  const pct = (completed / totalTrajs) * 100;
+                  progressBar.style.width = pct + "%";
+                  batchLabel.textContent = completed + " / " + totalTrajs;
+                  saveNext(idx + 1);
+                  return;
+                }
+                const origX = trajX,
+                  origY = trajY,
+                  origLen = trajLen;
+                trajX = res.x;
+                trajY = res.y;
+                trajLen = res.length;
+                const offscreen = document.createElement("canvas");
+                offscreen.width = Math.round(baseW * hiresScale);
+                offscreen.height = Math.round(baseH * hiresScale);
+                const fps = fpsInput ? parseInt(fpsInput.value) || 20 : 20;
+                // Render all frames for this trajectory
+                const frames = [];
+                for (let f = 0; f < trajLen; f++) {
+                  drawFrame(f, offscreen, hiresScale);
+                  frames.push(offscreen.toDataURL("image/png"));
+                }
+                trajX = origX;
+                trajY = origY;
+                trajLen = origLen;
+                const savePath = folder + "\\anim_" + idx + ".gif";
+                window.pywebview.api
+                  .save_canvas_gif(savePath, frames, fps)
+                  .then(() => {
+                    completed++;
+                    const pct = (completed / totalTrajs) * 100;
+                    progressBar.style.width = pct + "%";
+                    batchLabel.textContent = completed + " / " + totalTrajs;
+                    saveNext(idx + 1);
+                  })
+                  .catch(() => {
+                    completed++;
+                    saveNext(idx + 1);
+                  });
+              })
+              .catch(() => {
+                completed++;
+                saveNext(idx + 1);
+              });
+          }
+          saveNext(0);
+        });
       });
   };
 });

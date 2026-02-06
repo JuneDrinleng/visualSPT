@@ -34,7 +34,60 @@
           id="error-msg"
           style="color: red; display: none; padding: 20px"
         ></div>
-        <img id="plot-image" alt="Trajectory Plot" />
+        <canvas
+          id="anim-canvas"
+          style="display: none; width: 100%; height: 100%"
+        ></canvas>
+        <!-- keep img hidden, only used for GIF save fallback -->
+        <img id="plot-image" alt="Trajectory Plot" style="display: none" />
+      </div>
+
+      <div
+        id="anim-controls"
+        style="
+          display: none;
+          background: #fff;
+          padding: 0 15px;
+          border-top: 1px solid var(--border-color);
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+          height: 36px;
+          font-size: 0.8rem;
+        "
+      >
+        <button
+          id="play-pause-btn"
+          style="
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0 4px;
+          "
+          title="Play/Pause"
+        >
+          ▶
+        </button>
+        <span
+          id="frame-lbl"
+          style="
+            min-width: 50px;
+            text-align: center;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.75rem;
+          "
+          >0 / 0</span
+        >
+        <input
+          type="range"
+          id="frame-slider"
+          min="0"
+          max="0"
+          value="0"
+          style="flex: 1"
+        />
       </div>
 
       <div
@@ -139,17 +192,6 @@
             ></span
           ></label>
         </div>
-        <!-- <div
-          class="unit-row"
-          style="justify-content: space-between; margin-bottom: 10px"
-        >
-          <label class="setting-label" style="margin: 0">Show Title</label>
-          <label class="switch"
-            ><input type="checkbox" id="show-title-switch" checked /><span
-              class="slider"
-            ></span
-          ></label>
-        </div> -->
         <div
           class="unit-row"
           style="justify-content: space-between; margin-bottom: 10px"
@@ -177,9 +219,20 @@
       </div>
 
       <div class="action-area">
-        <button id="saveBtn" class="btn-save">
-          <i data-lucide="download" class="icon-btn"></i> Save View
-        </button>
+        <p class="save-hint">
+          Saving animation may take a while. Please do not switch pages.
+        </p>
+        <div class="save-btn-row">
+          <button id="saveBtn" class="btn-save">
+            <i data-lucide="download" class="icon-btn"></i> Save
+          </button>
+          <button id="batchSaveBtn" class="btn-save btn-batch">
+            <span class="batch-progress"></span>
+            <span class="batch-label"
+              ><i data-lucide="files" class="icon-btn"></i> Batch</span
+            >
+          </button>
+        </div>
       </div>
     </div>
   </div>

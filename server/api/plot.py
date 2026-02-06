@@ -47,7 +47,8 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
     time_axis = np.arange(len(x))
 
     figsize = (10, 8) if not save_path else (12, 10)
-    fig, ax = plt.subplots(figsize=figsize)
+    dpi = 80 if not save_path else 150
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     buf = io.BytesIO()
 
     try:
@@ -117,10 +118,10 @@ def generate_plot(plt, np, x, y, title='Trajectory Visualization', scale=1.0, ze
             fig.savefig(save_path, format=fmt, bbox_inches='tight', dpi=300)
             return "saved"
         else:
-            fig.savefig(buf, format='svg', bbox_inches='tight')
+            fig.savefig(buf, format='png', bbox_inches='tight')
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-            return "data:image/svg+xml;base64," + img_base64
+            return "data:image/png;base64," + img_base64
 
     except Exception as e:
         import traceback
