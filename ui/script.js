@@ -413,6 +413,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const scaleInput = root.querySelector("#scale-input");
     const xUnitInput = root.querySelector("#x-unit-input");
     const yUnitInput = root.querySelector("#y-unit-input");
+    const dtInput = root.querySelector("#dt-input");
+    const dtUnitInput = root.querySelector("#dt-unit-input");
 
     const titleInput = root.querySelector("#title-input");
     const legendSwitch = root.querySelector("#markers-switch");
@@ -428,7 +430,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return {
         index: parseInt(slider.value) || 0,
         scale: parseFloat(scaleInput.value) || 1.0,
-        x_unit: xUnitInput ? xUnitInput.value || "frame" : "frame",
+        x_unit: dtUnitInput
+          ? dtUnitInput.value ||
+            (xUnitInput ? xUnitInput.value || "frame" : "frame")
+          : xUnitInput
+            ? xUnitInput.value || "frame"
+            : "frame",
+        dt: dtInput ? parseFloat(dtInput.value) || 1.0 : 1.0,
         y_unit: yUnitInput ? yUnitInput.value || "unit" : "unit",
         custom_title: titleInput ? titleInput.value : "",
         show_legend: legendSwitch ? legendSwitch.checked : true,
@@ -461,6 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
             params.plot_tamsd,
             params.show_title,
             params.show_axis_labels,
+            params.dt
           )
           .then((res) => {
             loading.style.display = "none";
@@ -490,6 +499,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (scaleInput) scaleInput.addEventListener("change", updatePlot);
     if (xUnitInput) xUnitInput.addEventListener("change", updatePlot);
     if (yUnitInput) yUnitInput.addEventListener("change", updatePlot);
+    if (dtInput) dtInput.addEventListener("change", updatePlot);
+    if (dtUnitInput) dtUnitInput.addEventListener("change", updatePlot);
     if (titleInput) titleInput.addEventListener("change", updatePlot);
     if (legendSwitch) legendSwitch.addEventListener("change", updatePlot);
     if (eamsdSwitch) eamsdSwitch.addEventListener("change", updatePlot);

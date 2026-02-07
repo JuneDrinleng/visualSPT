@@ -191,14 +191,14 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
 
         # Plot individual trajectory TAMSD (if provided)
         if plot_tamsd and tamsd is not None and len(tamsd) > 0:
-            lags_t = np.arange(len(tamsd), dtype=float)
-            ax.loglog(lags_t, tamsd, color=c_green_dark, lw=2.2, label='TAMSD')
+            lags_t =lags_e
+            ax.loglog(lags_t, tamsd[:len(eamsd)], color=c_green_dark, lw=2.2, label='TAMSD')
             has_any = True
 
         # Plot ensemble TAMSD mean ± std as a single shaded region (skip lag=0 for log scale)
         tamsd_fill_handle = None
         if tamsd_mean is not None and len(tamsd_mean) > 0:
-            lags_tm = np.asarray(lags, dtype=float)[:len(tamsd_mean)]
+            lags_tm = lags_e
             # exclude non-positive lags (log scale cannot handle x<=0)
             pos_mask = lags_tm >= 0
             if np.any(pos_mask):
@@ -212,7 +212,7 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
                     # clamp lower to a small positive value for log plotting
                     lower = np.where(lower <= 0, 1e-12, lower)
                     try:
-                        tamsd_fill_handle = ax.fill_between(lags_pos, lower, upper, color=c_green_light, alpha=0.7, label='TAMSD ± std')
+                        tamsd_fill_handle = ax.fill_between(lags_pos, lower, upper, color=c_green_base, alpha=0.7, label='TAMSD ± std')
                     except Exception:
                         tamsd_fill_handle = None
                 else:
@@ -221,6 +221,38 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
 
         if not has_any:
             return ""
+
+        # Auto-adjust y-limits: collect positive finite values from plotted series
+        try:
+            vals = []
+            if plot_eamsd and eamsd is not None and len(eamsd) > 0:
+                arr = np.asarray(eamsd, dtype=float).ravel()
+                vals.append(arr)
+            if plot_tamsd and tamsd is not None and len(tamsd) > 0:
+                arr = np.asarray(tamsd, dtype=float).ravel()
+                vals.append(arr)
+            if tamsd_mean is not None and len(tamsd_mean) > 0:
+                arr = np.asarray(tamsd_mean, dtype=float).ravel()
+                vals.append(arr)
+            # include upper band when std present
+            if tamsd_mean is not None and tamsd_std is not None and len(tamsd_std) == len(tamsd_mean):
+                tm = np.asarray(tamsd_mean, dtype=float)
+                ts = np.asarray(tamsd_std, dtype=float)
+                vals.append((tm + ts).ravel())
+
+            if vals:
+                concat = np.concatenate(vals)
+                # keep only positive finite values and ignore artificially clamped tiny values
+                mask = np.isfinite(concat) & (concat > 1e-12)
+                concat = concat[mask]
+                if concat.size > 0:
+                    ymin = float(concat.min())
+                    ymax = float(concat.max())
+                    if np.isfinite(ymin) and np.isfinite(ymax) and ymin > 0 and ymax > 0:
+                        # set a reasonable margin: half to double
+                        ax.set_ylim(ymin / 2.0, ymax * 2.0)
+        except Exception:
+            pass
 
         if show_title:
             final_title = custom_title if custom_title.strip() else title

@@ -151,7 +151,7 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
-    def change_msd(self, index, scale=1.0, x_unit="frame", y_unit="unit", custom_title="", show_legend=True, plot_eamsd=True, plot_tamsd=True, show_title=True, show_axis_labels=True):
+    def change_msd(self, index, scale=1.0, x_unit="frame", y_unit="unit", custom_title="", show_legend=True, plot_eamsd=True, plot_tamsd=True, show_title=True, show_axis_labels=True, dt=1.0):
         self._ensure_libs()
         try:
             if len(self.trajectories) == 0:
@@ -161,17 +161,30 @@ class Api:
             if index < 0 or index >= len(self.trajectories):
                 return {"error": "Index out of range"}
 
+            # Always compute ensemble statistics (EAMSD and ensemble TAMSD mean/std).
+            # The `plot_eamsd` flag will only control whether EAMSD is drawn, not whether
+            # it is computed.
             lags = None
             eamsd = None
             tamsd = None
             tamsd_mean = None
             tamsd_std = None
-            if plot_eamsd:
-                lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
+            lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
+            # apply dt scaling to lag axis if provided by frontend
+            try:
+                dt = float(dt)
+            except Exception:
+                dt = 1.0
+            if lags is not None and len(lags) > 0 and dt != 1.0:
+                try:
+                    lags = self.np.asarray(lags, dtype=float) * dt
+                except Exception:
+                    pass
             if plot_tamsd:
                 tamsd = self._compute_tamsd(index, scale)
 
-            if (not plot_eamsd or eamsd is None or len(eamsd) == 0) and (not plot_tamsd or tamsd is None or len(tamsd) == 0):
+            # If neither EAMSD (when requested to plot) nor TAMSD are available, abort
+            if (plot_eamsd and (eamsd is None or len(eamsd) == 0)) and (not plot_tamsd or tamsd is None or len(tamsd) == 0):
                 return {"error": "No MSD data available to plot"}
 
             img = api_plot.generate_msd_plot(
@@ -274,17 +287,27 @@ class Api:
             show_title = options.get('show_title', True)
             show_axis_labels = options.get('show_axis_labels', True)
 
+            # Always compute ensemble EAMSD/TAMSD mean/std; plotting controlled by flags
             lags = None
             eamsd = None
             tamsd = None
             tamsd_mean = None
             tamsd_std = None
-            if plot_eamsd:
-                lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
+            lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
             if plot_tamsd:
                 tamsd = self._compute_tamsd(index, scale)
+            # apply dt scaling if provided in options
+            try:
+                dt = float(options.get('dt', 1.0))
+            except Exception:
+                dt = 1.0
+            if lags is not None and len(lags) > 0 and dt != 1.0:
+                try:
+                    lags = self.np.asarray(lags, dtype=float) * dt
+                except Exception:
+                    pass
 
-            if (not plot_eamsd or eamsd is None or len(eamsd) == 0) and (not plot_tamsd or tamsd is None or len(tamsd) == 0):
+            if (plot_eamsd and (eamsd is None or len(eamsd) == 0)) and (not plot_tamsd or tamsd is None or len(tamsd) == 0):
                 return {"error": "No MSD data available to save"}
 
             api_plot.generate_msd_plot(
