@@ -174,10 +174,22 @@ def _subclass_window(hwnd):
     _original_wndproc = _SetWindowLongPtr(hwnd, GWLP_WNDPROC, ctypes.cast(_wndproc_ref, ctypes.c_void_p).value)
 
 def _setup_window_async():
-    """设置窗口样式和阴影 (Windows 专用)"""
+    """设置窗口样式和阴影 (Windows 专用) - 已由 on_window_loaded 取代"""
+    pass  # kept for backward compatibility
+
+def _preload_libraries_async():
+    """异步预加载库，不阻塞主线程"""
+    try:
+        api.preload_libraries()
+        print("[System] Background library loading completed")
+    except Exception as e:
+        print(f"[System] Background library loading error: {e}")
+
+def on_window_loaded():
+    """webview loaded 回调：DOM 已就绪，立即设置窗口并显示"""
+    # 窗口样式设置（无延迟）
     if _IS_WINDOWS:
         try:
-            time.sleep(0.1)  # 减少延迟：允许窗口完全初始化
             title = getattr(window, 'title', 'visualSPT')
             hwnd = user32.FindWindowW(None, title)
             if hwnd:
@@ -198,21 +210,16 @@ def _setup_window_async():
         except Exception as e:
             _tlog(f"[WindowSetup] error: {e}")
 
-def _preload_libraries_async():
-    """异步预加载库，不阻塞主线程"""
+    # 立即显示窗口，不等待库加载
     try:
-        api.preload_libraries()
-        print("[System] Background library loading completed")
+        window.show()
+        print("[GUI] Window shown via loaded event")
     except Exception as e:
-        print(f"[System] Background library loading error: {e}")
+        print(f"[GUI] Window show error: {e}")
 
 def on_start_background_loading():
-    """主线程启动函数：设置窗口，库在后台异步加载"""
-    # 优先级 1: 窗口设置 (立即执行，快速)
-    _setup_window_async()
-    
-    # 优先级 2: 异步加载库 (不阻塞 UI)
-    # 窗口显示由前端 JavaScript 控制，当加载指示器显示时调用
+    """主线程启动函数：仅启动后台库加载"""
+    # 异步加载库 (不阻塞 UI)
     try:
         lib_thread = threading.Thread(target=_preload_libraries_async, daemon=True)
         lib_thread.start()
@@ -381,6 +388,12 @@ if __name__ == '__main__':
     )
     
     api.set_window(window)
+
+    # 注册 loaded 事件：DOM 就绪后立即设置窗口并显示
+    try:
+        window.events.loaded += on_window_loaded
+    except Exception as e:
+        print(f"[Window] attach loaded handler error: {e}")
 
     # start tray thread if available
     if _HAS_PYSTRAY:

@@ -24,6 +24,8 @@ class Api:
 
         self.is_loading_libs = False
         self.libs_loaded = False
+        self._loading_progress = 0      # 0-100 loading progress
+        self._loading_stage = ''        # current loading stage description
         self._always_on_top = False
 
         # Plot cache: (params_tuple) -> base64 image string
@@ -46,34 +48,60 @@ class Api:
             print(f"[GUI] Error showing window: {e}")
             return {"error": str(e)}
 
+    def get_loading_progress(self):
+        """返回当前加载进度 (0-100) 和阶段描述"""
+        return {
+            'progress': self._loading_progress,
+            'stage': self._loading_stage,
+            'done': self.libs_loaded
+        }
+
     def preload_libraries(self):
         if self.libs_loaded or self.is_loading_libs:
             return
 
         self.is_loading_libs = True
+        self._loading_progress = 5
+        self._loading_stage = 'Loading matplotlib...'
         print("[System] Loading the libraries...")
 
         try:
+            # Stage 1: matplotlib (heaviest)
             import matplotlib
+            self._loading_progress = 20
             matplotlib.use('Agg')
             import matplotlib.pyplot as plt
-            import pandas as pd
-            import numpy as np
-            from server.tool.read_traj_file import read_trackmate_csv, read_npy_traj, read_npz_traj
-
             self.plt = plt
+            self._loading_progress = 45
+            self._loading_stage = 'Loading pandas...'
+            print("[System] matplotlib loaded")
+
+            # Stage 2: pandas
+            import pandas as pd
             self.pd = pd
+            self._loading_progress = 65
+            self._loading_stage = 'Loading numpy...'
+            print("[System] pandas loaded")
+
+            # Stage 3: numpy
+            import numpy as np
             self.np = np
+            self._loading_progress = 80
+            self._loading_stage = 'Loading data readers...'
+            print("[System] numpy loaded")
+
+            # Stage 4: project-specific readers
+            from server.tool.read_traj_file import read_trackmate_csv, read_npy_traj, read_npz_traj
             self.read_trackmate_csv = read_trackmate_csv
             self.read_npy_traj = read_npy_traj
             self.read_npz_traj = read_npz_traj
-
-            # 跳过 matplotlib 测试绘图，加速启动
-            # matplotlib 将在首次使用时初始化，避免阻塞 UI 加载
+            self._loading_progress = 100
+            self._loading_stage = 'Ready'
 
             self.libs_loaded = True
             print("[System] Libraries loaded, system is ready.")
         except Exception as e:
+            self._loading_stage = f'Error: {e}'
             print(f"[System] Preload failed: {e}")
         finally:
             self.is_loading_libs = False

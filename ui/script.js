@@ -6,54 +6,70 @@ document.addEventListener("DOMContentLoaded", () => {
     windowFrame.style.display = "";
   }
 
-  // 移除预加载指示器（不再需要）
-  var preloader = document.getElementById("preloadSpinner");
-  if (preloader) {
-    preloader.remove();
-  }
+  // 库加载进度追踪：轮询后端真实进度并更新进度条
+  function trackLoadingProgress() {
+    const progressBar = document.querySelector(
+      "#loadingOverlay .loading-progress-bar",
+    );
+    const loadingText = document.getElementById("loadingText");
+    const loadingSubtext = document.getElementById("loadingSubtext");
+    let lastProgress = 0;
 
-  // 再次确保窗口显示
-  if (window.pywebview && window.pywebview.api) {
-    try {
-      window.pywebview.api.window_show();
-      console.log("[DOMContentLoaded] Window show triggered");
-    } catch (e) {
-      console.log("[DOMContentLoaded] window_show error:", e);
-    }
-  }
-
-  // 库加载完成检测：隐藏加载指示器
-  // 关键改进：加入 2 秒超时，无论如何都要显示 UI
-  function hideLoadingWhenReady() {
-    let attempts = 0;
-    const maxLibWaitTime = 20; // 2 秒超时
-
-    const checkLibs = setInterval(() => {
-      const isReady =
-        window.pywebview &&
-        window.pywebview.api &&
-        window.pywebview.api.libs_loaded;
-
-      if (isReady || attempts >= maxLibWaitTime) {
-        // 库已加载 OR 超时已到，隐藏加载指示器
-        clearInterval(checkLibs);
-        const loadingOverlay = document.getElementById("loadingOverlay");
-        if (loadingOverlay) {
-          loadingOverlay.classList.add("hidden");
-          setTimeout(() => {
-            loadingOverlay.remove();
-          }, 300);
-        }
-
-        const status = isReady ? "Library ready" : "Timeout reached";
-        console.log("[UI] " + status + ", hide loading overlay");
+    const poll = setInterval(() => {
+      if (
+        !window.pywebview ||
+        !window.pywebview.api ||
+        !window.pywebview.api.get_loading_progress
+      ) {
+        // API 尚未就绪，显示初始进度
+        if (progressBar) progressBar.style.width = "3%";
         return;
       }
 
-      attempts++;
-    }, 100);
+      window.pywebview.api
+        .get_loading_progress()
+        .then((res) => {
+          if (!res) return;
+          const pct = Math.max(lastProgress, res.progress || 0);
+          lastProgress = pct;
+
+          if (progressBar) progressBar.style.width = pct + "%";
+          if (loadingSubtext && res.stage)
+            loadingSubtext.textContent = res.stage;
+
+          if (res.done || pct >= 100) {
+            clearInterval(poll);
+            // 确保进度条到 100%
+            if (progressBar) progressBar.style.width = "100%";
+            if (loadingText) loadingText.textContent = "Ready";
+            if (loadingSubtext) loadingSubtext.textContent = "";
+
+            // 短暂停留让用户看到 100%，然后淡出
+            setTimeout(() => {
+              const overlay = document.getElementById("loadingOverlay");
+              if (overlay) {
+                overlay.classList.add("fade-out");
+                setTimeout(() => overlay.remove(), 250);
+              }
+            }, 200);
+            console.log("[UI] Libraries ready, overlay removed");
+          }
+        })
+        .catch(() => {});
+    }, 150);
+
+    // 安全超时：10 秒后无论如何都移除覆盖层
+    setTimeout(() => {
+      clearInterval(poll);
+      const overlay = document.getElementById("loadingOverlay");
+      if (overlay) {
+        overlay.classList.add("fade-out");
+        setTimeout(() => overlay.remove(), 250);
+        console.log("[UI] Timeout, overlay removed");
+      }
+    }, 10000);
   }
-  hideLoadingWhenReady();
+  trackLoadingProgress();
 
   const navBtns = document.querySelectorAll(".nav-btn");
 
@@ -99,14 +115,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let _currentPage = null;
+  // 页面 HTML 缓存：避免重复 fetch 已加载过的页面
+  const _pageCache = {};
 
   async function loadPage(key, pushState = true) {
     if (key === _currentPage) return;
     const app = document.getElementById("app");
     try {
-      const res = await fetch(`pages/${key}.html`);
-      if (!res.ok) throw new Error(`Failed to load page ${key}`);
-      const html = await res.text();
+      // 优先使用缓存
+      let html;
+      if (_pageCache[key]) {
+        html = _pageCache[key];
+      } else {
+        const res = await fetch(`pages/${key}.html`);
+        if (!res.ok) throw new Error(`Failed to load page ${key}`);
+        html = await res.text();
+        _pageCache[key] = html;
+      }
       app.innerHTML = html;
       // ensure any <link> in the fragment is applied (browsers will handle it when injected)
       // remove stale per-page stylesheets

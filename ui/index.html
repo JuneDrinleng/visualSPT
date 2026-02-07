@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background: #f8fafc">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,22 +7,21 @@
     <link rel="stylesheet" href="css/base.css" />
     <script src="lucide.min.js"></script>
     <style>
-      /* 快速加载指示器：最小化样式 */
+      /* 统一加载指示器样式 */
       .loading-overlay {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(255, 255, 255, 0.98);
+        background: var(--panel-bg, #f8fafc);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 9999;
-        transition: opacity 0.3s ease-out;
-        backdrop-filter: blur(2px);
+        transition: opacity 0.25s ease-out;
       }
-      .loading-overlay.hidden {
+      .loading-overlay.fade-out {
         opacity: 0;
         pointer-events: none;
       }
@@ -30,202 +29,52 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 16px;
+        gap: 14px;
         text-align: center;
       }
       .spinner {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         border: 3px solid #e2e8f0;
-        border-top-color: #6366f1;
+        border-top-color: var(--active-color, #6366f1);
         border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+        animation: spin 0.7s linear infinite;
       }
       .loading-text {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
-        color: #1e293b;
-        margin-bottom: 4px;
+        color: var(--text-color, #1e293b);
       }
       .loading-subtext {
-        font-size: 12px;
-        color: #64748b;
+        font-size: 11px;
+        color: var(--text-secondary, #64748b);
         max-width: 200px;
         line-height: 1.4;
       }
       .loading-progress {
-        margin-top: 8px;
-        height: 3px;
-        width: 120px;
+        height: 2px;
+        width: 100px;
         background: #e2e8f0;
-        border-radius: 2px;
+        border-radius: 1px;
         overflow: hidden;
       }
       .loading-progress-bar {
         height: 100%;
-        background: #6366f1;
-        animation: progress 2s ease-in-out infinite;
-      }
-      @keyframes progress {
-        0%,
-        100% {
-          width: 0;
-        }
-        50% {
-          width: 100%;
-        }
+        width: 0;
+        background: var(--active-color, #6366f1);
+        transition: width 0.3s ease-out;
       }
     </style>
-    <script>
-      // 尽早显示窗口：在 head 脚本中就尝试，不要等 DOMContentLoaded
-      // 这样用户可以更快看到预加载指示器
-      (function () {
-        let attempts = 0;
-        const maxAttempts = 20; // 2 秒内重试
-
-        function tryShow() {
-          if (
-            window.pywebview &&
-            window.pywebview.api &&
-            window.pywebview.api.window_show
-          ) {
-            try {
-              window.pywebview.api.window_show();
-              console.log("[Head] Window show successful");
-              return;
-            } catch (e) {
-              console.log("[Head] Window show not ready yet");
-            }
-          }
-
-          if (attempts < maxAttempts) {
-            attempts++;
-            setTimeout(tryShow, 100);
-          }
-        }
-
-        tryShow();
-      })();
-    </script>
   </head>
-  <body
-    style="
-      background: rgba(255, 255, 255, 0.98);
-      margin: 0;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    "
-  >
-    <!-- 预加载指示器：显示在 body 背景上，避免白屏 -->
-    <div
-      id="preloadSpinner"
-      style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 16px;
-        text-align: center;
-      "
-    >
-      <div
-        style="
-          width: 48px;
-          height: 48px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #6366f1;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        "
-      ></div>
-      <div
-        style="
-          font-size: 14px;
-          font-weight: 500;
-          color: #1e293b;
-          margin-bottom: 4px;
-        "
-      >
-        Initializing visualSPT
-      </div>
-      <div
-        style="
-          font-size: 12px;
-          color: #64748b;
-          max-width: 200px;
-          line-height: 1.4;
-        "
-      >
-        Loading libraries and preparing UI...
-      </div>
-      <div
-        style="
-          margin-top: 8px;
-          height: 3px;
-          width: 120px;
-          background: #e2e8f0;
-          border-radius: 2px;
-          overflow: hidden;
-        "
-      >
-        <div
-          style="
-            height: 100%;
-            background: #6366f1;
-            animation: progress 2s ease-in-out infinite;
-          "
-        ></div>
-      </div>
-    </div>
-    <style>
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      @keyframes progress {
-        0%,
-        100% {
-          width: 0;
-        }
-        50% {
-          width: 100%;
-        }
-      }
-    </style>
-    <script>
-      // 在 DOMContentLoaded 时显示窗口（DOM 完全准备好）
-      document.addEventListener("DOMContentLoaded", function () {
-        // 移除预加载指示器，显示真实窗口
-        var preloader = document.getElementById("preloadSpinner");
-        if (preloader) {
-          preloader.remove();
-        }
-
-        // 显示窗口
-        if (window.pywebview && window.pywebview.api) {
-          try {
-            window.pywebview.api.window_show();
-            console.log("[DOMContentLoaded] Window show triggered");
-          } catch (e) {
-            console.log("[DOMContentLoaded] window_show error:", e);
-          }
-        }
-      });
-    </script>
-    <!-- 加载指示器，库预加载时显示 -->
+  <body style="background: #f8fafc; margin: 0; padding: 0">
+    <!-- 单一加载指示器：在 DOM 加载完毕和库就绪后移除 -->
     <div class="loading-overlay" id="loadingOverlay">
       <div class="loading-spinner">
         <div class="spinner"></div>
-        <div class="loading-text">Initializing visualSPT</div>
-        <div class="loading-subtext">Loading libraries and preparing UI...</div>
+        <div class="loading-text" id="loadingText">Initializing visualSPT</div>
+        <div class="loading-subtext" id="loadingSubtext">
+          Preparing environment...
+        </div>
         <div class="loading-progress">
           <div class="loading-progress-bar"></div>
         </div>
