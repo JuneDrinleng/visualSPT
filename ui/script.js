@@ -395,6 +395,177 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   };
 
+  // --- Per-page initializer: msd-viewer ---
+  window.init_msd_viewer = function () {
+    const root = document.getElementById("app");
+    const uploadBtn = root.querySelector("#uploadBtn");
+    const filePathDisplay = root.querySelector("#file-path-display");
+    const plotImg = root.querySelector("#plot-image");
+    const loading = root.querySelector("#loading");
+    const errorMsg = root.querySelector("#error-msg");
+    const placeholder = root.querySelector("#placeholder");
+
+    const controlPanel = root.querySelector("#control-panel");
+    const slider = root.querySelector("#traj-slider");
+    const indexLbl = root.querySelector("#traj-index-lbl");
+    const totalLbl = root.querySelector("#total-traj-lbl");
+
+    const scaleInput = root.querySelector("#scale-input");
+    const xUnitInput = root.querySelector("#x-unit-input");
+    const yUnitInput = root.querySelector("#y-unit-input");
+
+    const titleInput = root.querySelector("#title-input");
+    const legendSwitch = root.querySelector("#markers-switch");
+    const eamsdSwitch = root.querySelector("#zero-start-switch");
+    const tamsdSwitch = root.querySelector("#show-grid-switch");
+    const showTitleSwitch = root.querySelector("#show-title-switch");
+    const showAxisLabelsSwitch = root.querySelector("#show-axis-labels-switch");
+    const saveBtn = root.querySelector("#saveBtn");
+
+    let isFileLoaded = false;
+
+    function getPlotParams() {
+      return {
+        index: parseInt(slider.value) || 0,
+        scale: parseFloat(scaleInput.value) || 1.0,
+        x_unit: xUnitInput ? xUnitInput.value || "frame" : "frame",
+        y_unit: yUnitInput ? yUnitInput.value || "unit" : "unit",
+        custom_title: titleInput ? titleInput.value : "",
+        show_legend: legendSwitch ? legendSwitch.checked : true,
+        plot_eamsd: eamsdSwitch ? eamsdSwitch.checked : true,
+        plot_tamsd: tamsdSwitch ? tamsdSwitch.checked : true,
+        show_title: showTitleSwitch ? showTitleSwitch.checked : true,
+        show_axis_labels: showAxisLabelsSwitch
+          ? showAxisLabelsSwitch.checked
+          : true,
+      };
+    }
+
+    function updatePlot() {
+      if (!isFileLoaded) return;
+      const params = getPlotParams();
+      indexLbl.textContent = params.index + 1;
+      if (window.pywebview) {
+        loading.style.display = "block";
+        plotImg.style.display = "none";
+        errorMsg.style.display = "none";
+        window.pywebview.api
+          .change_msd(
+            params.index,
+            params.scale,
+            params.x_unit,
+            params.y_unit,
+            params.custom_title,
+            params.show_legend,
+            params.plot_eamsd,
+            params.plot_tamsd,
+            params.show_title,
+            params.show_axis_labels,
+          )
+          .then((res) => {
+            loading.style.display = "none";
+            if (res.image) {
+              plotImg.src = res.image;
+              errorMsg.style.display = "none";
+              plotImg.style.display = "block";
+            } else if (res.error) {
+              errorMsg.textContent = res.error;
+              errorMsg.style.display = "block";
+            }
+          })
+          .catch((err) => {
+            loading.style.display = "none";
+            errorMsg.textContent = "System error: " + err;
+            errorMsg.style.display = "block";
+          });
+      }
+    }
+
+    if (slider) {
+      slider.addEventListener("input", () => {
+        indexLbl.textContent = parseInt(slider.value) + 1;
+      });
+      slider.addEventListener("change", updatePlot);
+    }
+    if (scaleInput) scaleInput.addEventListener("change", updatePlot);
+    if (xUnitInput) xUnitInput.addEventListener("change", updatePlot);
+    if (yUnitInput) yUnitInput.addEventListener("change", updatePlot);
+    if (titleInput) titleInput.addEventListener("change", updatePlot);
+    if (legendSwitch) legendSwitch.addEventListener("change", updatePlot);
+    if (eamsdSwitch) eamsdSwitch.addEventListener("change", updatePlot);
+    if (tamsdSwitch) tamsdSwitch.addEventListener("change", updatePlot);
+    if (showTitleSwitch) showTitleSwitch.addEventListener("change", updatePlot);
+    if (showAxisLabelsSwitch)
+      showAxisLabelsSwitch.addEventListener("change", updatePlot);
+
+    if (uploadBtn)
+      uploadBtn.addEventListener("click", () => {
+        if (!window.pywebview) {
+          alert("Please run in the Pywebview environment!");
+          return;
+        }
+        placeholder.style.display = "none";
+        plotImg.style.display = "none";
+        errorMsg.style.display = "none";
+        loading.style.display = "block";
+
+        window.pywebview.api
+          .process_file_dialog()
+          .then((res) => {
+            loading.style.display = "none";
+            if (res.cancelled) {
+              if (!isFileLoaded) placeholder.style.display = "flex";
+              return;
+            }
+            if (res.error) {
+              errorMsg.textContent = "Error: " + res.error;
+              errorMsg.style.display = "block";
+              filePathDisplay.textContent = "Failed to read";
+              isFileLoaded = false;
+            } else {
+              isFileLoaded = true;
+              filePathDisplay.textContent = res.file_path.split(/[/\\]/).pop();
+              if (res.total_trajs > 0) {
+                controlPanel.style.display = "flex";
+                slider.max = res.total_trajs - 1;
+                slider.value = 0;
+                indexLbl.textContent = "1";
+                totalLbl.textContent = `/ ${res.total_trajs} total`;
+                updatePlot();
+              }
+            }
+          })
+          .catch((err) => {
+            loading.style.display = "none";
+            errorMsg.textContent = "System error: " + err;
+            errorMsg.style.display = "block";
+          });
+      });
+
+    if (saveBtn)
+      saveBtn.addEventListener("click", () => {
+        if (!isFileLoaded) {
+          alert("Please load data first!");
+          return;
+        }
+        const params = getPlotParams();
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = "<span>⏳</span> Saving...";
+        saveBtn.disabled = true;
+        if (window.pywebview) {
+          window.pywebview.api.save_msd_plot(params).then((res) => {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+            if (res.success) {
+              alert("Saved successfully!\nPath: " + res.path);
+            } else if (res.error) {
+              alert("Save failed: " + res.error);
+            }
+          });
+        }
+      });
+  };
+
   // --- Per-page initializer: activate-traj (dynamic/activation visualization) ---
   window.init_activate_traj = function () {
     const root = document.getElementById("app");

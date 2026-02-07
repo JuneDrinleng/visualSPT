@@ -10,7 +10,7 @@ def eamsd_cal(X, t0: int = 0, lags=None, center: bool = False):
 
     Returns
     -------
-    msd : ndarray, shape (L,)
+    msd : ndarray, shape (lags_len,)
     """
     X = np.asarray(X)
     X=X.transpose(0, 2, 1)  # (B, L, D) into (B, D, L)
@@ -30,13 +30,15 @@ def eamsd_cal(X, t0: int = 0, lags=None, center: bool = False):
         msd = np.maximum(msd, 0.0)
     return msd
 
-def tamsd_cal(trajectory, max_lag=None):
+def tamsd_cal(trajectory_input, max_lag=None):
     """
     calculate time-averaged mean square displacement
-    :param trajectory: numpy array of shape (D, N), where N is traj_len, D is dimension
+    :param trajectory_input: numpy array of shape (L, D), where L is traj_len, D is dimension
     :param max_lag: maximum lag time to calculate MSD, default is traj_len//4
     :return: msd: numpy array of shape (max_lag,)
     """
+    trajectory = np.asarray(trajectory_input)
+    trajectory=trajectory.transpose(1, 0)  # (L, D) into (D, L)
     traj_len = trajectory.shape[1]
     if max_lag is None:
         max_lag = traj_len//4

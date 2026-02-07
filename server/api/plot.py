@@ -147,6 +147,96 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
     if len(x) < 2:
         return ""
 
+
+def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, title='MSD Visualization', x_unit="frame", y_unit="unit", save_path=None, custom_title="", show_legend=True, show_title=True, show_axis_labels=True, plot_eamsd=True, plot_tamsd=True):
+    c_red_dark  = "#BA0E05"  
+    c_red_base  = "#E04F5F"  
+    c_red_light = "#F4A3AE"  
+    c_red_bg    = "#FDECEC"  
+
+    c_blue_dark  = "#4A90E2"  
+    c_blue_base  = "#7CB9E8"  
+    c_blue_light = "#B3D1F5"  
+    c_blue_bg    = "#EAF4FC"  
+
+    c_orange_dark  = "#E68A00"  
+    c_orange_base  = "#F7B267"  
+    c_orange_light = "#FAD9B3" 
+    c_orange_bg    = "#FEF5EA" 
+
+    c_green_dark  = "#28C76F"  
+    c_green_base  = "#9BE7C4"  
+    c_green_light = "#CDF3E1"  
+    c_green_bg    = "#E9F9F0"  
+
+    c_gray_900 = "#1F2937"  
+    c_gray_700 = "#4B5563"  
+    c_gray_500 = "#9CA3AF"  
+    c_gray_300 = "#D1D5DB"  
+    c_gray_100 = "#F3F4F6"  
+    c_white    = "#FFFFFF"  
+
+    plt.close('all')
+
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
+    buf = io.BytesIO()
+
+    try:
+        has_any = False
+
+        if plot_eamsd and eamsd is not None and len(eamsd) > 0:
+            lags_e = np.asarray(lags, dtype=float)[:len(eamsd)]
+            ax.loglog(lags_e, eamsd, color=c_orange_dark, lw=2.2, label='EAMSD')
+            has_any = True
+
+        if plot_tamsd and tamsd is not None and len(tamsd) > 0:
+            lags_t = np.arange(len(tamsd), dtype=float)
+            ax.loglog(lags_t, tamsd, color=c_green_dark, lw=2.2, label='TAMSD')
+            has_any = True
+
+        if not has_any:
+            return ""
+
+        if show_title:
+            final_title = custom_title if custom_title.strip() else title
+            ax.set_title(final_title)
+
+        if show_axis_labels:
+            ax.set_xlabel(f"Lag ({x_unit})")
+            ax.set_ylabel(f"MSD ({y_unit})")
+        else:
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        if show_legend:
+            ax.legend(loc='best')
+
+        ax.grid(True, linestyle='--', alpha=0.25)
+
+        if save_path:
+            fmt = 'svg'
+            if save_path.lower().endswith('.png'):
+                fmt = 'png'
+            elif save_path.lower().endswith('.pdf'):
+                fmt = 'pdf'
+            fig.savefig(save_path, format=fmt, bbox_inches='tight', dpi=300)
+            return "saved"
+        else:
+            fig.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            return "data:image/png;base64," + img_base64
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Plot error (msd): {e}")
+        return ""
+    finally:
+        plt.close(fig)
+        buf.close()
+
     if zero_start:
         x = x - x[0]
         y = y - y[0]

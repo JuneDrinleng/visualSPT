@@ -5,6 +5,7 @@ import webview
 
 from . import io as api_io
 from . import plot as api_plot
+from server.tool.cal_msd import eamsd_cal, tamsd_cal
 
 
 class Api:
@@ -150,6 +151,48 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
+    def change_msd(self, index, scale=1.0, x_unit="frame", y_unit="unit", custom_title="", show_legend=True, plot_eamsd=True, plot_tamsd=True, show_title=True, show_axis_labels=True):
+        self._ensure_libs()
+        try:
+            if len(self.trajectories) == 0:
+                return {"error": "No trajectories loaded"}
+            index = int(index)
+            scale = float(scale)
+            if index < 0 or index >= len(self.trajectories):
+                return {"error": "Index out of range"}
+
+            lags = None
+            eamsd = None
+            tamsd = None
+            if plot_eamsd:
+                lags, eamsd = self._compute_eamsd(scale)
+            if plot_tamsd:
+                tamsd = self._compute_tamsd(index, scale)
+
+            if (not plot_eamsd or eamsd is None or len(eamsd) == 0) and (not plot_tamsd or tamsd is None or len(tamsd) == 0):
+                return {"error": "No MSD data available to plot"}
+
+            img = api_plot.generate_msd_plot(
+                self.plt, self.np,
+                lags if lags is not None else self.np.arange(0),
+                eamsd=eamsd,
+                tamsd=tamsd,
+                title=f"MSD ID: {index}",
+                x_unit=x_unit,
+                y_unit=y_unit,
+                custom_title=custom_title,
+                show_legend=show_legend,
+                show_title=show_title,
+                show_axis_labels=show_axis_labels,
+                plot_eamsd=plot_eamsd,
+                plot_tamsd=plot_tamsd
+            )
+            if not img:
+                return {"error": "MSD plot failed"}
+            return {"image": img}
+        except Exception as e:
+            return {"error": str(e)}
+
     def save_plot(self, options):
         self._ensure_libs()
         try:
@@ -198,6 +241,63 @@ class Api:
 
             return {"success": True, "path": save_path}
 
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e)}
+
+    def save_msd_plot(self, options):
+        self._ensure_libs()
+        try:
+            save_path = self._window.create_file_dialog(
+                webview.FileDialog.SAVE,
+                save_filename=f"msd_{options.get('index', 0)}.svg",
+                file_types=('SVG Image (*.svg)', 'PNG Image (*.png)', 'All files (*.*)')
+            )
+
+            if not save_path:
+                return {"cancelled": True}
+            save_path = save_path if isinstance(save_path, str) else save_path[0]
+
+            index = int(options.get('index', 0))
+            scale = float(options.get('scale', 1.0))
+            x_unit = options.get('x_unit', "frame")
+            y_unit = options.get('y_unit', "unit")
+            custom_title = options.get('custom_title', "")
+            show_legend = options.get('show_legend', True)
+            plot_eamsd = options.get('plot_eamsd', True)
+            plot_tamsd = options.get('plot_tamsd', True)
+            show_title = options.get('show_title', True)
+            show_axis_labels = options.get('show_axis_labels', True)
+
+            lags = None
+            eamsd = None
+            tamsd = None
+            if plot_eamsd:
+                lags, eamsd = self._compute_eamsd(scale)
+            if plot_tamsd:
+                tamsd = self._compute_tamsd(index, scale)
+
+            if (not plot_eamsd or eamsd is None or len(eamsd) == 0) and (not plot_tamsd or tamsd is None or len(tamsd) == 0):
+                return {"error": "No MSD data available to save"}
+
+            api_plot.generate_msd_plot(
+                self.plt, self.np,
+                lags if lags is not None else self.np.arange(0),
+                eamsd=eamsd,
+                tamsd=tamsd,
+                title=f"MSD ID: {index}",
+                x_unit=x_unit,
+                y_unit=y_unit,
+                custom_title=custom_title,
+                show_legend=show_legend,
+                show_title=show_title,
+                show_axis_labels=show_axis_labels,
+                plot_eamsd=plot_eamsd,
+                plot_tamsd=plot_tamsd,
+                save_path=save_path
+            )
+            return {"success": True, "path": save_path}
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -442,6 +542,42 @@ class Api:
         traj = self.trajectories[index]
         x, y = api_plot.extract_xy(traj, self.pd, self.np)
         return api_plot.generate_plot(self.plt, self.np, x, y, title=f"Trajectory ID: {index}", scale=scale, zero_start=zero_start, x_unit=x_unit, y_unit=y_unit, custom_title=custom_title, show_markers=show_markers, show_title=show_title, show_axis_labels=show_axis_labels, show_grid=show_grid, show_colorbar=show_colorbar, show_ticks=show_ticks, show_border=show_border)
+
+    def _extract_scaled_xy(self, traj, scale=1.0):
+        x, y = api_plot.extract_xy(traj, self.pd, self.np)
+        x = self.np.asarray(x, dtype=float)
+        y = self.np.asarray(y, dtype=float)
+        valid = self.np.isfinite(x) & self.np.isfinite(y)
+        x = x[valid]
+        y = y[valid]
+        if scale != 1.0 and scale != 0:
+            x = x * scale
+            y = y * scale
+        return x, y
+
+    def _compute_eamsd(self, scale=1.0):
+        trajs = []
+        for i in range(len(self.trajectories)):
+            x, y = self._extract_scaled_xy(self.trajectories[i], scale)
+            if len(x) >= 2:
+                trajs.append(self.np.stack([x, y], axis=1))
+        if not trajs:
+            return None, None
+        min_len = min(t.shape[0] for t in trajs)
+        if min_len < 2:
+            return None, None
+        X = self.np.stack([t[:min_len] for t in trajs], axis=0)
+        msd = eamsd_cal(X)
+        lags = self.np.arange(len(msd))
+        return lags, msd
+
+    def _compute_tamsd(self, index, scale=1.0):
+        traj = self.trajectories[index]
+        x, y = self._extract_scaled_xy(traj, scale)
+        if len(x) < 2:
+            return None
+        traj_xy = self.np.stack([x, y], axis=1)
+        return tamsd_cal(traj_xy)
 
     def get_trajectory_data(self, index, scale=1.0, zero_start=False):
         """Return raw trajectory coordinates as JSON for client-side Canvas animation."""
