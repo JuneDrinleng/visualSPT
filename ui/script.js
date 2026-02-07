@@ -83,6 +83,19 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pageKey === targetKey) b.classList.add("active");
       else b.classList.remove("active");
     });
+    updateNavIndicator();
+  }
+
+  function updateNavIndicator() {
+    const sidebar = document.querySelector(".sidebar");
+    const activeBtn = document.querySelector(".nav-btn.active");
+
+    if (sidebar && activeBtn) {
+      const top = activeBtn.offsetTop;
+      const height = activeBtn.offsetHeight;
+      sidebar.style.setProperty("--nav-indicator-top", `${top}px`);
+      sidebar.style.setProperty("--nav-indicator-height", `${height}px`);
+    }
   }
 
   let _currentPage = null;
@@ -165,7 +178,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // handle back/forward
+  // Initialize nav indicator position on first load
+  updateNavIndicator(); // handle back/forward
   window.addEventListener("popstate", (e) => {
     const key =
       (e.state && e.state.page) ||
