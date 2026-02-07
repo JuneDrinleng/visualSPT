@@ -148,7 +148,7 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
         return ""
 
 
-def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, title='MSD Visualization', x_unit="frame", y_unit="unit", save_path=None, custom_title="", show_legend=True, show_title=True, show_axis_labels=True, plot_eamsd=True, plot_tamsd=True):
+def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, tamsd_std=None, title='MSD Visualization', x_unit="frame", y_unit="unit", save_path=None, custom_title="", show_legend=True, show_title=True, show_axis_labels=True, plot_eamsd=True, plot_tamsd=True):
     c_red_dark  = "#BA0E05"  
     c_red_base  = "#E04F5F"  
     c_red_light = "#F4A3AE"  
@@ -189,10 +189,35 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, title='MSD Visualiz
             ax.loglog(lags_e, eamsd, color=c_orange_dark, lw=2.2, label='EAMSD')
             has_any = True
 
+        # Plot individual trajectory TAMSD (if provided)
         if plot_tamsd and tamsd is not None and len(tamsd) > 0:
             lags_t = np.arange(len(tamsd), dtype=float)
             ax.loglog(lags_t, tamsd, color=c_green_dark, lw=2.2, label='TAMSD')
             has_any = True
+
+        # Plot ensemble TAMSD mean ± std as a single shaded region (skip lag=0 for log scale)
+        tamsd_fill_handle = None
+        if tamsd_mean is not None and len(tamsd_mean) > 0:
+            lags_tm = np.asarray(lags, dtype=float)[:len(tamsd_mean)]
+            # exclude non-positive lags (log scale cannot handle x<=0)
+            pos_mask = lags_tm >= 0
+            if np.any(pos_mask):
+                lags_pos = lags_tm[pos_mask]
+                mean_pos = np.asarray(tamsd_mean, dtype=float)[pos_mask]
+                # only draw filled std band when tamsd_std is provided
+                if tamsd_std is not None and len(tamsd_std) == len(tamsd_mean):
+                    std_pos = np.asarray(tamsd_std, dtype=float)[pos_mask]
+                    lower = mean_pos - std_pos
+                    upper = mean_pos + std_pos
+                    # clamp lower to a small positive value for log plotting
+                    lower = np.where(lower <= 0, 1e-12, lower)
+                    try:
+                        tamsd_fill_handle = ax.fill_between(lags_pos, lower, upper, color=c_green_light, alpha=0.7, label='TAMSD ± std')
+                    except Exception:
+                        tamsd_fill_handle = None
+                else:
+                    tamsd_fill_handle = None
+                has_any = True
 
         if not has_any:
             return ""
@@ -211,7 +236,33 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, title='MSD Visualiz
             ax.set_yticks([])
 
         if show_legend:
-            ax.legend(loc='best')
+            try:
+                from matplotlib.patches import Patch
+                import matplotlib.collections as mcollections
+
+                handles, labels = ax.get_legend_handles_labels()
+                new_handles = []
+                new_labels = []
+                for h, l in zip(handles, labels):
+                    try:
+                        if isinstance(h, mcollections.PolyCollection):
+                            fc = h.get_facecolor()
+                            if hasattr(fc, '__len__') and len(fc) > 0:
+                                rgba = fc[0]
+                                # separate RGB and alpha to avoid double-alpha issues
+                                rgb = tuple(rgba[:3]) if len(rgba) >= 3 else tuple(rgba)
+                                alpha = float(rgba[3]) if len(rgba) > 3 else None
+                                new_handles.append(Patch(facecolor=rgb, edgecolor='none', alpha=alpha, label=l))
+                            else:
+                                new_handles.append(h)
+                        else:
+                            new_handles.append(h)
+                    except Exception:
+                        new_handles.append(h)
+                    new_labels.append(l)
+                ax.legend(new_handles, new_labels, loc='best')
+            except Exception:
+                ax.legend(loc='best')
 
         ax.grid(True, linestyle='--', alpha=0.25)
 

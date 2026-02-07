@@ -164,8 +164,10 @@ class Api:
             lags = None
             eamsd = None
             tamsd = None
+            tamsd_mean = None
+            tamsd_std = None
             if plot_eamsd:
-                lags, eamsd = self._compute_eamsd(scale)
+                lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
             if plot_tamsd:
                 tamsd = self._compute_tamsd(index, scale)
 
@@ -177,6 +179,8 @@ class Api:
                 lags if lags is not None else self.np.arange(0),
                 eamsd=eamsd,
                 tamsd=tamsd,
+                tamsd_mean=tamsd_mean,
+                tamsd_std=tamsd_std,
                 title=f"MSD ID: {index}",
                 x_unit=x_unit,
                 y_unit=y_unit,
@@ -273,8 +277,10 @@ class Api:
             lags = None
             eamsd = None
             tamsd = None
+            tamsd_mean = None
+            tamsd_std = None
             if plot_eamsd:
-                lags, eamsd = self._compute_eamsd(scale)
+                lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
             if plot_tamsd:
                 tamsd = self._compute_tamsd(index, scale)
 
@@ -286,6 +292,8 @@ class Api:
                 lags if lags is not None else self.np.arange(0),
                 eamsd=eamsd,
                 tamsd=tamsd,
+                tamsd_mean=tamsd_mean,
+                tamsd_std=tamsd_std,
                 title=f"MSD ID: {index}",
                 x_unit=x_unit,
                 y_unit=y_unit,
@@ -562,14 +570,38 @@ class Api:
             if len(x) >= 2:
                 trajs.append(self.np.stack([x, y], axis=1))
         if not trajs:
-            return None, None
+            return None, None, None, None
         min_len = min(t.shape[0] for t in trajs)
         if min_len < 2:
-            return None, None
+            return None, None, None, None
         X = self.np.stack([t[:min_len] for t in trajs], axis=0)
-        msd = eamsd_cal(X)
-        lags = self.np.arange(len(msd))
-        return lags, msd
+        try:
+            res = eamsd_cal(X)
+        except Exception:
+            # fallback: attempt old interface
+            res = eamsd_cal(X)
+        # eamsd_cal may return either msd array or (eamsd, tamsd_mean, tamsd_std)
+        tamsd_mean = None
+        tamsd_std = None
+        if isinstance(res, tuple) or isinstance(res, list):
+            if len(res) >= 1:
+                eamsd = res[0]
+            else:
+                eamsd = None
+            if len(res) >= 2:
+                tamsd_mean = res[1]
+            if len(res) >= 3:
+                tamsd_std = res[2]
+        else:
+            eamsd = res
+
+        if eamsd is None:
+            return None, None, None, None
+        lags = self.np.arange(len(eamsd))
+        # if only one trajectory in ensemble, do not provide std (no ensemble spread)
+        if len(trajs) <= 1:
+            tamsd_std = None
+        return lags, eamsd, tamsd_mean, tamsd_std
 
     def _compute_tamsd(self, index, scale=1.0):
         traj = self.trajectories[index]
