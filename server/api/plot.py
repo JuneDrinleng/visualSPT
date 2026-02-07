@@ -148,7 +148,7 @@ def generate_activation_plot(plt, np, x, y, title='Activation Visualization', sc
         return ""
 
 
-def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, tamsd_std=None, title='MSD Visualization', x_unit="frame", y_unit="unit", save_path=None, custom_title="", show_legend=True, show_title=True, show_axis_labels=True, plot_eamsd=True, plot_tamsd=True):
+def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, tamsd_std=None, title='MSD Visualization', x_unit="frame", y_unit="unit", save_path=None, custom_title="", show_legend=True, show_title=True, show_axis_labels=True, plot_eamsd=True, plot_tamsd=True, plot_tamsd_mean=True):
     c_red_dark  = "#BA0E05"  
     c_red_base  = "#E04F5F"  
     c_red_light = "#F4A3AE"  
@@ -197,7 +197,7 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
 
         # Plot ensemble TAMSD mean ± std as a single shaded region (skip lag=0 for log scale)
         tamsd_fill_handle = None
-        if tamsd_mean is not None and len(tamsd_mean) > 0:
+        if plot_tamsd_mean and tamsd_mean is not None and len(tamsd_mean) > 0:
             lags_tm = lags_e
             # exclude non-positive lags (log scale cannot handle x<=0)
             pos_mask = lags_tm >= 0

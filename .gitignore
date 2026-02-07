@@ -3,3 +3,4 @@
 *.pyc
 *.spec
 /test_data/output
+/test/output

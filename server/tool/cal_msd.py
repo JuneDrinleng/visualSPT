@@ -58,7 +58,9 @@ def eamsd_cal(X, t0: int = 0, lags=None, center: bool = False):
         tamsd_mean = tamsd_arr.mean(axis=0)
         tamsd_std = tamsd_arr.std(axis=0)
     eamsd = msd
-    return eamsd, tamsd_mean, tamsd_std
+    # Return per-trajectory TAMSD array as fourth element to allow callers
+    # to reuse individual TAMSD series without recomputing.
+    return eamsd, tamsd_mean, tamsd_std, tamsd_arr
 
 def tamsd_cal(trajectory_input, max_lag=None):
     """

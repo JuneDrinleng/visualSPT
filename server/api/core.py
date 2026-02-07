@@ -29,6 +29,8 @@ class Api:
         # Plot cache: (params_tuple) -> base64 image string
         self._plot_cache = {}
         self._plot_cache_max = 50
+        # MSD cache keyed by scale (float) -> dict with keys: lags, eamsd, tamsd_mean, tamsd_std, tamsd_arr
+        self._msd_cache = {}
 
     def set_window(self, window):
         self._window = window
@@ -100,6 +102,7 @@ class Api:
             self.trajectories = traj_data
             self.current_file = os.path.basename(file_path)
             self._plot_cache.clear()  # clear cache on new file
+            self._msd_cache.clear()
             first_traj_img = ""
             if traj_number > 0:
                 first_traj_img = self._plot_trajectory_by_index(0)
@@ -151,7 +154,7 @@ class Api:
         except Exception as e:
             return {"error": str(e)}
 
-    def change_msd(self, index, scale=1.0, x_unit="frame", y_unit="unit", custom_title="", show_legend=True, plot_eamsd=True, plot_tamsd=True, show_title=True, show_axis_labels=True, dt=1.0):
+    def change_msd(self, index, scale=1.0, x_unit="frame", y_unit="unit", custom_title="", show_legend=True, plot_eamsd=True, plot_tamsd=True, plot_tamsd_mean=True, show_title=True, show_axis_labels=True, dt=1.0):
         self._ensure_libs()
         try:
             if len(self.trajectories) == 0:
@@ -202,7 +205,8 @@ class Api:
                 show_title=show_title,
                 show_axis_labels=show_axis_labels,
                 plot_eamsd=plot_eamsd,
-                plot_tamsd=plot_tamsd
+                plot_tamsd=plot_tamsd,
+                plot_tamsd_mean=plot_tamsd_mean
             )
             if not img:
                 return {"error": "MSD plot failed"}
@@ -284,6 +288,7 @@ class Api:
             show_legend = options.get('show_legend', True)
             plot_eamsd = options.get('plot_eamsd', True)
             plot_tamsd = options.get('plot_tamsd', True)
+            plot_tamsd_mean = options.get('plot_tamsd_mean', True)
             show_title = options.get('show_title', True)
             show_axis_labels = options.get('show_axis_labels', True)
 
@@ -326,6 +331,7 @@ class Api:
                 show_axis_labels=show_axis_labels,
                 plot_eamsd=plot_eamsd,
                 plot_tamsd=plot_tamsd,
+                plot_tamsd_mean=plot_tamsd_mean,
                 save_path=save_path
             )
             return {"success": True, "path": save_path}
@@ -379,6 +385,64 @@ class Api:
             )
             return {"success": True, "path": save_path}
         except Exception as e:
+            return {"error": str(e)}
+
+    def batch_save_single_msd(self, folder, options):
+        """Save a single MSD plot to a folder (used during batch save for MSD viewer)."""
+        self._ensure_libs()
+        try:
+            index = int(options.get('index', 0))
+            scale = float(options.get('scale', 1.0))
+            x_unit = options.get('x_unit', "frame")
+            y_unit = options.get('y_unit', "unit")
+            custom_title = options.get('custom_title', "")
+            show_legend = options.get('show_legend', True)
+            plot_eamsd = options.get('plot_eamsd', True)
+            plot_tamsd = options.get('plot_tamsd', True)
+            plot_tamsd_mean = options.get('plot_tamsd_mean', True)
+            show_title = options.get('show_title', True)
+            show_axis_labels = options.get('show_axis_labels', True)
+            dt = float(options.get('dt', 1.0))
+
+            save_path = os.path.join(folder, f"msd_{index}.png")
+
+            # compute ensemble stats and per-trajectory tamsd as done in change_msd
+            lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
+            if plot_tamsd:
+                tamsd = self._compute_tamsd(index, scale)
+            else:
+                tamsd = None
+
+            # apply dt scaling
+            if lags is not None and len(lags) > 0 and dt != 1.0:
+                try:
+                    lags = self.np.asarray(lags, dtype=float) * dt
+                except Exception:
+                    pass
+
+            api_plot.generate_msd_plot(
+                self.plt, self.np,
+                lags if lags is not None else self.np.arange(0),
+                eamsd=eamsd,
+                tamsd=tamsd,
+                tamsd_mean=tamsd_mean,
+                tamsd_std=tamsd_std,
+                title=f"MSD ID: {index}",
+                x_unit=x_unit,
+                y_unit=y_unit,
+                custom_title=custom_title,
+                show_legend=show_legend,
+                show_title=show_title,
+                show_axis_labels=show_axis_labels,
+                plot_eamsd=plot_eamsd,
+                plot_tamsd=plot_tamsd,
+                plot_tamsd_mean=plot_tamsd_mean,
+                save_path=save_path
+            )
+            return {"success": True, "path": save_path}
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {"error": str(e)}
 
     def batch_save_canvas_image(self, folder, index, data_url):
@@ -569,6 +633,59 @@ class Api:
             return {"error": str(e)}
         return {"error": "no window"}
 
+    def get_asset(self, filename):
+        """获取资源文件的 base64 编码数据"""
+        try:
+            import sys
+            print(f"[Asset] Requesting asset: {filename}")
+            
+            # 获取资源文件根目录
+            if getattr(sys, 'frozen', False):
+                base_dir = sys._MEIPASS
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            
+            print(f"[Asset] Base dir: {base_dir}")
+            file_path = os.path.join(base_dir, 'assets', filename)
+            print(f"[Asset] Full path: {file_path}")
+            print(f"[Asset] File exists: {os.path.exists(file_path)}")
+            
+            if not os.path.exists(file_path):
+                error_msg = f"File not found: {filename} at {file_path}"
+                print(f"[Asset] Error: {error_msg}")
+                return {"error": error_msg}
+            
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+            
+            print(f"[Asset] File size: {len(file_data)} bytes")
+            
+            # 根据文件扩展名确定 MIME 类型
+            ext = os.path.splitext(filename)[1].lower()
+            mime_types = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp',
+                '.svg': 'image/svg+xml'
+            }
+            mime_type = mime_types.get(ext, 'application/octet-stream')
+            
+            # 返回 base64 编码的数据
+            b64_data = base64.b64encode(file_data).decode('utf-8')
+            print(f"[Asset] Successfully encoded {filename} as base64")
+            return {
+                "data": f"data:{mime_type};base64,{b64_data}",
+                "mime": mime_type
+            }
+        except Exception as e:
+            error_msg = f"Exception in get_asset: {str(e)}"
+            print(f"[Asset] {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return {"error": error_msg}
+
     def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True, show_colorbar=True, show_ticks=True, show_border=True):
         traj = self.trajectories[index]
         x, y = api_plot.extract_xy(traj, self.pd, self.np)
@@ -587,6 +704,12 @@ class Api:
         return x, y
 
     def _compute_eamsd(self, scale=1.0):
+        scale_key = float(scale)
+        # reuse cached ensemble MSD if available for the same scale
+        cache = self._msd_cache.get(scale_key)
+        if cache is not None:
+            return cache.get('lags'), cache.get('eamsd'), cache.get('tamsd_mean'), cache.get('tamsd_std')
+
         trajs = []
         for i in range(len(self.trajectories)):
             x, y = self._extract_scaled_xy(self.trajectories[i], scale)
@@ -606,6 +729,7 @@ class Api:
         # eamsd_cal may return either msd array or (eamsd, tamsd_mean, tamsd_std)
         tamsd_mean = None
         tamsd_std = None
+        tamsd_arr = None
         if isinstance(res, tuple) or isinstance(res, list):
             if len(res) >= 1:
                 eamsd = res[0]
@@ -615,6 +739,9 @@ class Api:
                 tamsd_mean = res[1]
             if len(res) >= 3:
                 tamsd_std = res[2]
+            # optional fourth return value: full per-trajectory TAMSD array
+            if len(res) >= 4:
+                tamsd_arr = res[3]
         else:
             eamsd = res
 
@@ -624,6 +751,14 @@ class Api:
         # if only one trajectory in ensemble, do not provide std (no ensemble spread)
         if len(trajs) <= 1:
             tamsd_std = None
+        # cache ensemble results and optional per-trajectory TAMSD array
+        self._msd_cache[scale_key] = {
+            'lags': lags,
+            'eamsd': eamsd,
+            'tamsd_mean': tamsd_mean,
+            'tamsd_std': tamsd_std,
+            'tamsd_arr': tamsd_arr
+        }
         return lags, eamsd, tamsd_mean, tamsd_std
 
     def _compute_tamsd(self, index, scale=1.0):
@@ -632,6 +767,18 @@ class Api:
         if len(x) < 2:
             return None
         traj_xy = self.np.stack([x, y], axis=1)
+        # try using cached per-trajectory TAMSD from ensemble computation to avoid recompute
+        cache = self._msd_cache.get(float(scale))
+        if cache is not None:
+            tamsd_arr = cache.get('tamsd_arr')
+            if tamsd_arr is not None:
+                try:
+                    row = tamsd_arr[index]
+                    # ensure numpy array
+                    return self.np.asarray(row)
+                except Exception:
+                    pass
+        # fallback: compute TAMSD for single trajectory
         return tamsd_cal(traj_xy)
 
     def get_trajectory_data(self, index, scale=1.0, zero_start=False):

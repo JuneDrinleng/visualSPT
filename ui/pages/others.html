@@ -1,5 +1,577 @@
 <link rel="stylesheet" href="css/viewer.css" />
-<div style="padding: 40px; text-align: center; color: #95a5a6">
-  <h2>Others</h2>
-  <p>Under development...</p>
+<style>
+  #others-page-container {
+    background: #ffffff;
+    height: 100%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .profile-card {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e2ebf9 100%);
+    max-width: 700px;
+    width: 90%;
+    height: 93%;
+    border-radius: 24px;
+    box-shadow: none;
+    border: none;
+    overflow: hidden;
+    animation: fadeInUp 0.7s ease-out;
+    margin: 0;
+    backdrop-filter: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px 18px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  #name-line {
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-top: 4px;
+    margin-bottom: 11px;
+    position: relative;
+    z-index: 2;
+    letter-spacing: 0.3px;
+  }
+
+  #maxim-line {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-style: italic;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+      sans-serif;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 2;
+    line-height: 1.35;
+    max-width: 85%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .profile-header::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+  }
+
+  .profile-header::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  #avatar-wrap {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+
+  #avatar-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.3),
+      rgba(255, 255, 255, 0.1)
+    );
+    border-radius: 50%;
+    z-index: -1;
+  }
+
+  #avatar-img {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.98);
+    box-shadow: 0 6px 18px rgba(102, 126, 234, 0.3);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: block;
+  }
+
+  #avatar-img:hover {
+    transform: scale(1.08) rotateZ(2deg);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.45);
+  }
+
+  #avatar-wrap {
+    margin-bottom: 6px;
+  }
+
+  #year-line {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    position: relative;
+    z-index: 2;
+    letter-spacing: 0.2px;
+    margin-top: 5px;
+  }
+
+  .profile-body {
+    padding: 16px 20px 12px 20px;
+    overflow-y: auto;
+    flex: 0 1 auto;
+  }
+
+  .info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    margin-bottom: 14px;
+  }
+
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 11px;
+  }
+
+  .info-section {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5fb 100%);
+    border-radius: 12px;
+    padding: 12px 14px;
+    border: 1.5px solid #e8eef9;
+    box-shadow: 0 3px 10px rgba(102, 126, 234, 0.06);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .info-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(102, 126, 234, 0.2),
+      transparent
+    );
+  }
+
+  .info-section:hover {
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.18);
+    transform: translateY(-4px);
+    border-color: #d4dff9;
+    background: linear-gradient(135deg, #ffffff 0%, #f5f9fc 100%);
+  }
+
+  .info-section.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .info-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+    color: #667eea;
+    font-size: 0.67rem;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .info-label i {
+    width: 16px;
+    height: 16px;
+    padding: 5px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .info-content {
+    color: #2d3748;
+    line-height: 1.35;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding-top: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 13px;
+    border: 2px solid #667eea;
+    border-radius: 18px;
+    background: transparent;
+    color: #667eea;
+    font-size: 0.77rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.2px;
+  }
+
+  .action-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    z-index: -1;
+    transition: left 0.4s ease;
+  }
+
+  .action-btn:hover {
+    color: #ffffff;
+    border-color: transparent;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+  }
+
+  .action-btn:hover::before {
+    left: 0;
+  }
+
+  .action-btn i {
+    width: 15px;
+    height: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 600px) {
+    #others-page-container {
+      padding: 16px;
+    }
+
+    .profile-header {
+      padding: 32px 20px 42px;
+    }
+
+    .profile-body {
+      padding: 24px 20px;
+    }
+
+    #avatar-img {
+      width: 100px;
+      height: 100px;
+    }
+
+    #year-line {
+      font-size: 1.05rem;
+    }
+
+    .info-row {
+      grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+      flex-direction: column;
+    }
+
+    .action-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+
+<div id="others-page-container">
+  <div class="profile-card">
+    <div class="profile-header">
+      <div id="avatar-wrap">
+        <img id="avatar-img" src="" alt="Avatar" />
+      </div>
+      <div id="name-line">June Drinleng</div>
+      <div id="maxim-line">
+        Il n'y a qu'un héroïsme au monde : c'est de voir le monde tel qu'il est
+        et de l'aimer
+      </div>
+      <div id="year-line">
+        <span id="year-prefix"></span>-Year Doctoral Student
+      </div>
+    </div>
+
+    <div class="profile-body">
+      <div class="info-grid">
+        <div class="info-section full-width">
+          <div class="info-label">
+            <i data-lucide="graduation-cap"></i>
+            Education
+          </div>
+          <div class="info-content">
+            2020-2024 Tsinghua University — B.Sc. in Chemistry
+          </div>
+        </div>
+
+        <div class="info-row">
+          <div class="info-section">
+            <div class="info-label">
+              <i data-lucide="microscope"></i>
+              Research
+            </div>
+            <div class="info-content">Trajectory Analysis for SPT</div>
+          </div>
+
+          <div class="info-section">
+            <div class="info-label">
+              <i data-lucide="heart"></i>
+              Interests
+            </div>
+            <div class="info-content">Time-series Computer Vision</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <a
+          id="github-link"
+          class="action-btn"
+          href="https://github.com/JuneDrinleng"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i data-lucide="github"></i>
+          GitHub
+        </a>
+
+        <a
+          id="contact-btn"
+          class="action-btn"
+          href="mailto:zhu-jl24@mails.tsinghua.edu.cn"
+        >
+          <i data-lucide="mail"></i>
+          Contact
+        </a>
+
+        <!-- <button id="check-update-btn" class="action-btn">
+          <i data-lucide="refresh-cw"></i>
+          检查更新
+        </button> -->
+        <a
+          id="researchgate-btn"
+          class="action-btn"
+          href="https://www.researchgate.net/profile/Junlun-Zhu-2"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i data-lucide="search"></i>
+          ResearchGate
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  // 加载头像
+  (async function () {
+    console.log("[Avatar] Starting avatar load...");
+
+    // 等待 pywebview API 准备就绪
+    async function waitForAPI(maxWait = 5000) {
+      const start = Date.now();
+      while (Date.now() - start < maxWait) {
+        if (
+          window.pywebview &&
+          window.pywebview.api &&
+          window.pywebview.api.get_asset
+        ) {
+          return true;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return false;
+    }
+
+    try {
+      console.log("[Avatar] Waiting for pywebview API...");
+      const apiReady = await waitForAPI();
+
+      if (!apiReady) {
+        console.error("[Avatar] pywebview API not available after timeout");
+        return;
+      }
+
+      console.log("[Avatar] pywebview API ready, calling get_asset...");
+      const result = await window.pywebview.api.get_asset("about.jpg");
+      console.log("[Avatar] get_asset result:", result);
+
+      if (result && result.data) {
+        const avatarImg = document.getElementById("avatar-img");
+        if (avatarImg) {
+          console.log("[Avatar] Setting image src...");
+          avatarImg.src = result.data;
+          console.log("[Avatar] Image src set successfully");
+        } else {
+          console.error("[Avatar] avatar-img element not found");
+        }
+      } else if (result && result.error) {
+        console.error("[Avatar] Failed to load avatar:", result.error);
+      } else {
+        console.error("[Avatar] Unexpected result format:", result);
+      }
+    } catch (e) {
+      console.error("[Avatar] Error loading avatar:", e);
+    }
+  })();
+
+  (function () {
+    // Initialize Lucide icons after page loads
+    if (typeof lucide !== "undefined") {
+      setTimeout(() => {
+        lucide.createIcons();
+      }, 100);
+    }
+
+    // compute academic year index based on start = Sep 2024
+    function ordinalWord(n) {
+      if (n === 1) return "First";
+      if (n === 2) return "Second";
+      if (n === 3) return "Third";
+      if (n === 4) return "Fourth";
+      if (n === 5) return "Fifth";
+      // fallback to numeric ordinal
+      const rem100 = n % 100;
+      const rem10 = n % 10;
+      const suffix =
+        rem10 === 1 && rem100 !== 11
+          ? "st"
+          : rem10 === 2 && rem100 !== 12
+            ? "nd"
+            : rem10 === 3 && rem100 !== 13
+              ? "rd"
+              : "th";
+      return n + suffix;
+    }
+
+    try {
+      const startYear = 2024;
+      const startMonth = 9; // September (1-based month)
+      const now = new Date();
+      const months =
+        (now.getFullYear() - startYear) * 12 +
+        (now.getMonth() + 1 - startMonth);
+      const yearPrefixEl = document.getElementById("year-prefix");
+      const yearLineEl = document.getElementById("year-line");
+
+      // determine graduated cutoff: after June 2029
+      const graduated =
+        now.getFullYear() > 2029 ||
+        (now.getFullYear() === 2029 && now.getMonth() + 1 > 6);
+
+      console.log("Year calculation:", {
+        months,
+        graduated,
+        now: now.toISOString(),
+      });
+
+      if (months < 0) {
+        // not started yet
+        yearLineEl.textContent = "Starting Sep 2024";
+      } else {
+        if (graduated) {
+          yearLineEl.textContent = "Congratulations for Graduation!";
+          // Update education section to add PhD info
+          const educationContent = document.querySelector(
+            ".info-section .info-content",
+          );
+          if (educationContent) {
+            const gradMarker =
+              "2024–2029 Tsinghua University — PhD in Chemistry";
+            if (!educationContent.innerHTML.includes(gradMarker)) {
+              educationContent.innerHTML += "<br />" + gradMarker;
+            }
+          }
+        } else {
+          const yearIndex = Math.floor(months / 12) + 1;
+          yearPrefixEl.textContent = ordinalWord(yearIndex);
+          yearLineEl.textContent = `${ordinalWord(yearIndex)}-year doctoral student`;
+          console.log("Set year line to:", yearLineEl.textContent);
+        }
+      }
+    } catch (e) {
+      // ignore and leave placeholder
+      console.error("Year compute failed", e);
+    }
+
+    const checkBtn = document.getElementById("check-update-btn");
+    checkBtn.addEventListener("click", function () {
+      // UI placeholder: actual update logic implemented later in backend
+      if (
+        window.pywebview &&
+        window.pywebview.api &&
+        window.pywebview.api.check_update
+      ) {
+        window.pywebview.api
+          .check_update()
+          .then((res) => {
+            if (res && res.message) alert(res.message);
+            else alert("检查完成 (占位响应)");
+          })
+          .catch((err) => alert("检查更新失败: " + err));
+      } else {
+        alert("检查更新功能尚未实现。");
+      }
+    });
+  })();
+</script>

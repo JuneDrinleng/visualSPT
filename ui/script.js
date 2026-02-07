@@ -114,7 +114,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
       // re-set innerHTML after extracting links to avoid duplicate tags
-      app.innerHTML = html.replace(/<link[^>]+>/gi, "");
+      const cleanHtml = html.replace(/<link[^>]+>/gi, "");
+
+      // Extract and execute scripts manually (innerHTML doesn't execute scripts)
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = cleanHtml;
+      const scripts = tempDiv.querySelectorAll("script");
+
+      // Set HTML without scripts first
+      app.innerHTML = cleanHtml.replace(
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+        "",
+      );
+
+      // Execute each script
+      scripts.forEach((oldScript) => {
+        const newScript = document.createElement("script");
+        // Copy attributes
+        Array.from(oldScript.attributes).forEach((attr) => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        // Copy script content
+        newScript.textContent = oldScript.textContent;
+        // Append to app to execute
+        app.appendChild(newScript);
+      });
+
       // Re-initialize Lucide icons in dynamically loaded content
       if (typeof lucide !== "undefined") lucide.createIcons();
       setActiveButton(key);
@@ -341,6 +366,55 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         }
       });
+    if (batchSaveBtn)
+      batchSaveBtn.addEventListener("click", () => {
+        if (!isFileLoaded) {
+          alert("Please load data first!");
+          return;
+        }
+        if (!window.pywebview) return;
+        const params = getPlotParams();
+        const totalTrajs = parseInt(slider.max) + 1;
+        const progressBar = batchSaveBtn.querySelector(".batch-progress");
+        const batchLabel = batchSaveBtn.querySelector(".batch-label");
+        window.pywebview.api.select_folder().then((folderRes) => {
+          if (!folderRes || folderRes.cancelled) return;
+          const folder = folderRes.path;
+          batchSaveBtn.disabled = true;
+          progressBar.style.width = "0%";
+          let completed = 0;
+          function saveNext(idx) {
+            if (idx >= totalTrajs) {
+              batchLabel.innerHTML =
+                '<i data-lucide="files" class="icon-btn"></i> Batch';
+              if (typeof lucide !== "undefined") lucide.createIcons();
+              progressBar.style.width = "0%";
+              batchSaveBtn.disabled = false;
+              alert(
+                "Batch save complete!\n" +
+                  totalTrajs +
+                  " files saved to:\n" +
+                  folder,
+              );
+              return;
+            }
+            const p = Object.assign({}, params, { index: idx });
+            window.pywebview.api
+              .batch_save_single_msd(folder, p)
+              .then((res) => {
+                completed++;
+                const pct = (completed / totalTrajs) * 100;
+                progressBar.style.width = pct + "%";
+                saveNext(idx + 1);
+              })
+              .catch(() => {
+                completed++;
+                saveNext(idx + 1);
+              });
+          }
+          saveNext(0);
+        });
+      });
 
     if (batchSaveBtn)
       batchSaveBtn.addEventListener("click", () => {
@@ -420,6 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const legendSwitch = root.querySelector("#markers-switch");
     const eamsdSwitch = root.querySelector("#zero-start-switch");
     const tamsdSwitch = root.querySelector("#show-grid-switch");
+    const tamsdMeanSwitch = root.querySelector("#plot-tamsd-mean-switch");
     const showTitleSwitch = root.querySelector("#show-title-switch");
     const showAxisLabelsSwitch = root.querySelector("#show-axis-labels-switch");
     const saveBtn = root.querySelector("#saveBtn");
@@ -442,6 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
         show_legend: legendSwitch ? legendSwitch.checked : true,
         plot_eamsd: eamsdSwitch ? eamsdSwitch.checked : true,
         plot_tamsd: tamsdSwitch ? tamsdSwitch.checked : true,
+        plot_tamsd_mean: tamsdMeanSwitch ? tamsdMeanSwitch.checked : true,
         show_title: showTitleSwitch ? showTitleSwitch.checked : true,
         show_axis_labels: showAxisLabelsSwitch
           ? showAxisLabelsSwitch.checked
@@ -467,9 +543,10 @@ document.addEventListener("DOMContentLoaded", () => {
             params.show_legend,
             params.plot_eamsd,
             params.plot_tamsd,
+            params.plot_tamsd_mean,
             params.show_title,
             params.show_axis_labels,
-            params.dt
+            params.dt,
           )
           .then((res) => {
             loading.style.display = "none";
@@ -505,6 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (legendSwitch) legendSwitch.addEventListener("change", updatePlot);
     if (eamsdSwitch) eamsdSwitch.addEventListener("change", updatePlot);
     if (tamsdSwitch) tamsdSwitch.addEventListener("change", updatePlot);
+    if (tamsdMeanSwitch) tamsdMeanSwitch.addEventListener("change", updatePlot);
     if (showTitleSwitch) showTitleSwitch.addEventListener("change", updatePlot);
     if (showAxisLabelsSwitch)
       showAxisLabelsSwitch.addEventListener("change", updatePlot);
@@ -574,6 +652,56 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           });
         }
+      });
+    const batchSaveBtn = root.querySelector("#batchSaveBtn");
+    if (batchSaveBtn)
+      batchSaveBtn.addEventListener("click", () => {
+        if (!isFileLoaded) {
+          alert("Please load data first!");
+          return;
+        }
+        if (!window.pywebview) return;
+        const params = getPlotParams();
+        const totalTrajs = parseInt(slider.max) + 1;
+        const progressBar = batchSaveBtn.querySelector(".batch-progress");
+        const batchLabel = batchSaveBtn.querySelector(".batch-label");
+        window.pywebview.api.select_folder().then((folderRes) => {
+          if (!folderRes || folderRes.cancelled) return;
+          const folder = folderRes.path;
+          batchSaveBtn.disabled = true;
+          progressBar.style.width = "0%";
+          let completed = 0;
+          function saveNext(idx) {
+            if (idx >= totalTrajs) {
+              batchLabel.innerHTML =
+                '<i data-lucide="files" class="icon-btn"></i> Batch';
+              if (typeof lucide !== "undefined") lucide.createIcons();
+              progressBar.style.width = "0%";
+              batchSaveBtn.disabled = false;
+              alert(
+                "Batch save complete!\n" +
+                  totalTrajs +
+                  " files saved to:\n" +
+                  folder,
+              );
+              return;
+            }
+            const p = Object.assign({}, params, { index: idx });
+            window.pywebview.api
+              .batch_save_single_msd(folder, p)
+              .then((res) => {
+                completed++;
+                const pct = (completed / totalTrajs) * 100;
+                progressBar.style.width = pct + "%";
+                saveNext(idx + 1);
+              })
+              .catch(() => {
+                completed++;
+                saveNext(idx + 1);
+              });
+          }
+          saveNext(0);
+        });
       });
   };
 

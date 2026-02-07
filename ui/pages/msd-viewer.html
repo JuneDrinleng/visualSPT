@@ -177,12 +177,31 @@
             ></span
           ></label>
         </div>
+        <div
+          class="unit-row"
+          style="justify-content: space-between; margin-bottom: 10px"
+        >
+          <label class="setting-label" style="margin: 0">Plot Std Area</label>
+          <label class="switch"
+            ><input type="checkbox" id="plot-tamsd-mean-switch" checked /><span
+              class="slider"
+            ></span>
+          </label>
+        </div>
       </div>
 
       <div class="action-area">
-        <button id="saveBtn" class="btn-save">
-          <i data-lucide="download" class="icon-btn"></i> Save View
-        </button>
+        <div class="save-btn-row">
+          <button id="saveBtn" class="btn-save">
+            <i data-lucide="download" class="icon-btn"></i> Save
+          </button>
+          <button id="batchSaveBtn" class="btn-save btn-batch">
+            <span class="batch-progress"></span>
+            <span class="batch-label"
+              ><i data-lucide="files" class="icon-btn"></i> Batch</span
+            >
+          </button>
+        </div>
       </div>
     </div>
   </div>
