@@ -41,11 +41,11 @@ if _IS_MACOS:
         """Activate the application and bring all windows to front on macOS."""
         try:
             import subprocess
+            pid = int(os.getpid())
             subprocess.Popen([
                 'osascript', '-e',
-                'tell application "System Events" to set frontmost of '
-                'the first process whose unix id is '
-                + str(os.getpid()) + ' to true'
+                f'tell application "System Events" to set frontmost of '
+                f'the first process whose unix id is {pid} to true'
             ])
             return True
         except Exception as e:
@@ -398,9 +398,17 @@ if __name__ == '__main__':
     elif _IS_MACOS:
         try:
             import fcntl
+            import atexit
             _lock_path = os.path.join(os.path.expanduser('~'), '.visualSPT.lock')
             _lock_file = open(_lock_path, 'w')
             fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            def _release_lock():
+                try:
+                    fcntl.flock(_lock_file, fcntl.LOCK_UN)
+                    _lock_file.close()
+                except Exception:
+                    pass
+            atexit.register(_release_lock)
         except IOError:
             # Another instance is running
             _bring_window_to_front_macos()

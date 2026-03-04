@@ -118,7 +118,7 @@ jobs:
           --add-data "assets:assets"
           main.py
 
-      - name: Create DMG
+      - name: Package macOS app
         run: |
           cd dist
           zip -r visualSPT-mac.zip visualSPT.app
