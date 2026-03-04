@@ -1,65 +1,68 @@
 # visualSPT
 
-visualSPT 是一个面向单粒子轨迹（Single Particle Tracking, SPT）数据的桌面可视化工具，基于 `pywebview + Python` 构建。  
-项目核心目标是让用户快速完成三类工作：
+Language: **English** | [中文](README.zh-CN.md)
 
-1. 绘制轨迹静态图
-2. 绘制轨迹 GIF 动图
-3. 绘制 MSD（EAMSD / TAMSD）分析图
+visualSPT is a desktop visualization tool for Single Particle Tracking (SPT) data, built with `pywebview + Python`.
 
-## 主要功能
+It focuses on three core tasks:
 
-### 1) 轨迹静态图（Trajectory Visualization）
-- 支持按轨迹 ID 查看与切换
-- 轨迹按时间渐变着色
-- 可选起点/终点标记、网格、坐标轴、标题、颜色条
-- 支持缩放、原点归一（zero start）、单位自定义
-- 可导出 `SVG / PNG`（MSD 也支持导出）
+1. Plot static trajectory figures
+2. Create trajectory GIF animations
+3. Visualize MSD curves (EAMSD / TAMSD)
 
-### 2) 轨迹动图（Animation / GIF）
-- 支持逐帧播放轨迹动态过程
-- 支持设置 `FPS`、拖尾长度（trail length）
-- 可显示时间条和坐标辅助信息
-- 可导出为 `GIF`
+## Features
 
-### 3) MSD 可视化（MSD Analysis）
-- 支持 EAMSD 与单条轨迹 TAMSD 绘制
-- 支持展示 TAMSD 的均值与标准差带（mean ± std）
-- 对数坐标绘图，适合扩散行为分析
-- 支持单位与标题自定义，支持保存图像
+### 1) Static Trajectory Plot
+- View and switch trajectories by ID
+- Time-colored trajectory rendering
+- Optional start/end markers, grid, axis labels, title, and colorbar
+- Scale conversion and zero-start normalization
+- Export to `SVG` / `PNG`
 
-## 支持数据格式
+### 2) Trajectory GIF Animation
+- Frame-by-frame trajectory animation
+- Configurable `FPS` and trail length
+- Optional time bar and axis hints
+- Export animation as `GIF`
 
-- `TrackMate CSV`（按 `TRACK_ID`、`FRAME` 读取）
+### 3) MSD Visualization
+- Plot EAMSD and per-trajectory TAMSD
+- Optional TAMSD mean and std band visualization
+- Log-scale plotting for diffusion analysis
+- Export to `SVG` / `PNG`
+
+## Supported Input Formats
+
+- `TrackMate CSV`
 - `NPY`
-- `NPZ`（自动识别常见轨迹键名，如 `traj`/`track`/`trajectories`）
+- `NPZ` (auto-detects common trajectory keys like `traj`, `track`, `trajectories`)
 
-## 快速开始
+## Quick Start
 
-1. 安装依赖
+1. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. 运行程序
+2. Run
 
 ```bash
 python main.py
 ```
 
-## 项目结构（核心）
+## Core Structure
 
 ```text
-main.py                    # 程序入口（窗口、托盘、生命周期）
-server/api/core.py         # 前后端 API 聚合（文件读取、绘图、导出）
-server/api/plot.py         # 轨迹图 / GIF / MSD 绘制逻辑
-server/tool/read_traj_file.py  # CSV/NPY/NPZ 读取
-server/tool/cal_msd.py     # EAMSD/TAMSD 计算
-ui/                        # 前端页面与交互
+main.py                        # App entry (window, tray, lifecycle)
+server/api/core.py             # Backend API orchestration
+server/api/plot.py             # Trajectory/GIF/MSD plotting logic
+server/tool/read_traj_file.py  # CSV/NPY/NPZ loaders
+server/tool/cal_msd.py         # EAMSD/TAMSD calculations
+ui/                            # Frontend pages and interactions
 ```
 
-## 打包命令（Windows）
+## Build (Windows)
 
 ```bash
 pyinstaller -F -w --name "visualSPT" --icon "logo.ico" ^
@@ -81,7 +84,7 @@ pyinstaller -F -w --name "visualSPT" --icon "logo.ico" ^
   main.py
 ```
 
-## 依赖快照更新
+## Refresh `requirements.txt`
 
 ```bash
 pip freeze > requirements.txt
