@@ -1,0 +1,68 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'version_info.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from version_info.txt
+        id: get_version
+        shell: python
+        run: |
+          import re, os
+          with open('version_info.txt', 'r', encoding='utf-8') as f:
+              content = f.read()
+          match = re.search(r"StringStruct\(u'ProductVersion',\s*u'([\d.]+)'\)", content)
+          if not match:
+              raise SystemExit('Failed to extract version from version_info.txt')
+          version = match.group(1)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'version={version}\n')
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build with PyInstaller
+        run: >
+          pyinstaller -F -w --name "visualSPT" --icon "logo.ico"
+          --version-file "version_info.txt"
+          --hidden-import=server.tool.read_traj_file
+          --hidden-import=server.tool.plot_traj
+          --hidden-import=server.api.io
+          --hidden-import=server.api.plot
+          --hidden-import=matplotlib.backends.backend_svg
+          --hidden-import=matplotlib.backends.backend_agg
+          --hidden-import=numpy
+          --hidden-import=pandas
+          --hidden-import=pystray
+          --hidden-import=pystray._win32
+          --hidden-import=PIL
+          --hidden-import=PIL.Image
+          --add-data "ui;ui"
+          --add-data "assets;assets"
+          main.py
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: visualSPT v${{ steps.get_version.outputs.version }}
+          files: dist/visualSPT.exe
+          generate_release_notes: true
