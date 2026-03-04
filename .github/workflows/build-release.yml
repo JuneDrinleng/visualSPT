@@ -137,6 +137,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
@@ -149,6 +152,39 @@ jobs:
           name: macos-build
           path: dist
 
+      - name: Generate latest.yml
+        shell: bash
+        env:
+          VERSION_TAG: v${{ needs.build-windows.outputs.version }}
+          VERSION: ${{ needs.build-windows.outputs.version }}
+          PUBLIC_REPO: ${{ secrets.PUBLIC_REPO_NAME }}
+        run: |
+          set -euo pipefail
+
+          REPO="${PUBLIC_REPO:-$GITHUB_REPOSITORY}"
+          ASSET_PATH="dist/visualSPT.exe"
+          ASSET_NAME="visualSPT.exe"
+
+          SHA256=$(sha256sum "$ASSET_PATH" | awk '{print $1}')
+          FILE_SIZE=$(stat -c%s "$ASSET_PATH")
+          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION_TAG}/${ASSET_NAME}"
+
+          cat > latest.yml <<EOF
+          version: "${VERSION}"
+          files:
+            - url: "${DOWNLOAD_URL}"
+              name: "${ASSET_NAME}"
+              size: ${FILE_SIZE}
+              sha256: "${SHA256}"
+          releaseTag: "${VERSION_TAG}"
+          releasePage: "https://github.com/${REPO}/releases/tag/${VERSION_TAG}"
+          notes: "Auto-built from ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
+          createdAt: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          EOF
+
+          echo "Generated latest.yml:"
+          cat latest.yml
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -157,22 +193,5 @@ jobs:
           files: |
             dist/visualSPT.exe
             dist/visualSPT-mac.zip
+            latest.yml
           generate_release_notes: true
-
-      - name: Update latest tag
-        shell: bash
-        run: |
-          git tag -f latest
-          git push origin latest --force
-
-      - name: Update latest Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: "visualSPT latest (v${{ steps.get_version.outputs.version }})"
-          files: dist/visualSPT.exe
-          body: |
-            This is the latest build of visualSPT (v${{ steps.get_version.outputs.version }}).
-            This release is automatically updated with each new version.
-          prerelease: false
-          make_latest: false
