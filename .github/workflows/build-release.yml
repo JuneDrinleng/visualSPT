@@ -66,3 +66,21 @@ jobs:
           name: visualSPT v${{ steps.get_version.outputs.version }}
           files: dist/visualSPT.exe
           generate_release_notes: true
+
+      - name: Update latest tag
+        shell: bash
+        run: |
+          git tag -f latest
+          git push origin latest --force
+
+      - name: Update latest Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "visualSPT latest (v${{ steps.get_version.outputs.version }})"
+          files: dist/visualSPT.exe
+          body: |
+            This is the latest build of visualSPT (v${{ steps.get_version.outputs.version }}).
+            This release is automatically updated with each new version.
+          prerelease: false
+          make_latest: false
