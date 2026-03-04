@@ -120,17 +120,18 @@ jobs:
           --add-data "assets:assets"
           main.py
 
-      - name: Package macOS app
+      - name: Package macOS app as DMG
         run: |
-          cd dist
-          zip -r visualSPT-mac.zip visualSPT.app
-          cd ..
+          mkdir -p dist/dmg
+          cp -R dist/visualSPT.app dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "visualSPT" -srcfolder dist/dmg -ov -format UDZO dist/visualSPT-mac.dmg
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: dist/visualSPT-mac.zip
+          path: dist/visualSPT-mac.dmg
 
   release:
     needs: [build-windows, build-macos]
@@ -162,20 +163,30 @@ jobs:
           set -euo pipefail
 
           REPO="${PUBLIC_REPO:-$GITHUB_REPOSITORY}"
-          ASSET_PATH="dist/visualSPT.exe"
-          ASSET_NAME="visualSPT.exe"
+          WIN_ASSET_PATH="dist/visualSPT.exe"
+          WIN_ASSET_NAME="visualSPT.exe"
+          MAC_ASSET_PATH="dist/visualSPT-mac.dmg"
+          MAC_ASSET_NAME="visualSPT-mac.dmg"
 
-          SHA256=$(sha256sum "$ASSET_PATH" | awk '{print $1}')
-          FILE_SIZE=$(stat -c%s "$ASSET_PATH")
-          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION_TAG}/${ASSET_NAME}"
+          WIN_SHA256=$(sha256sum "$WIN_ASSET_PATH" | awk '{print $1}')
+          WIN_FILE_SIZE=$(stat -c%s "$WIN_ASSET_PATH")
+          WIN_DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION_TAG}/${WIN_ASSET_NAME}"
+
+          MAC_SHA256=$(sha256sum "$MAC_ASSET_PATH" | awk '{print $1}')
+          MAC_FILE_SIZE=$(stat -c%s "$MAC_ASSET_PATH")
+          MAC_DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION_TAG}/${MAC_ASSET_NAME}"
 
           cat > latest.yml <<EOF
           version: "${VERSION}"
           files:
-            - url: "${DOWNLOAD_URL}"
-              name: "${ASSET_NAME}"
-              size: ${FILE_SIZE}
-              sha256: "${SHA256}"
+            - url: "${WIN_DOWNLOAD_URL}"
+              name: "${WIN_ASSET_NAME}"
+              size: ${WIN_FILE_SIZE}
+              sha256: "${WIN_SHA256}"
+            - url: "${MAC_DOWNLOAD_URL}"
+              name: "${MAC_ASSET_NAME}"
+              size: ${MAC_FILE_SIZE}
+              sha256: "${MAC_SHA256}"
           releaseTag: "${VERSION_TAG}"
           releasePage: "https://github.com/${REPO}/releases/tag/${VERSION_TAG}"
           notes: "Auto-built from ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
@@ -192,6 +203,6 @@ jobs:
           name: visualSPT v${{ needs.build-windows.outputs.version }}
           files: |
             dist/visualSPT.exe
-            dist/visualSPT-mac.zip
+            dist/visualSPT-mac.dmg
             latest.yml
           generate_release_notes: true
