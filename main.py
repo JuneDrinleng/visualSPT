@@ -29,10 +29,28 @@ def _tlog(*args, **kwargs):
 # event used to keep process alive until user quits from tray
 _TRAY_QUIT_EVENT = threading.Event()
 
-# Windows helper to bring window to front using Win32 API
+# Platform detection
 _IS_WINDOWS = os.name == 'nt'
+_IS_MACOS = sys.platform == 'darwin'
 _wndproc_ref = None  # prevent GC of the callback
 _original_wndproc = None
+
+# macOS helper: bring window to front using NSApplication
+if _IS_MACOS:
+    def _bring_window_to_front_macos():
+        """Activate the application and bring all windows to front on macOS."""
+        try:
+            import subprocess
+            subprocess.Popen([
+                'osascript', '-e',
+                'tell application "System Events" to set frontmost of '
+                'the first process whose unix id is '
+                + str(os.getpid()) + ' to true'
+            ])
+            return True
+        except Exception as e:
+            _tlog(f"[Tray] macOS bring front error: {e}")
+            return False
 
 if _IS_WINDOWS:
     try:
@@ -277,7 +295,7 @@ def _create_tray(window, quit_event):
             except Exception as ex:
                 _tlog(f"[Tray] evaluate_js focus error: {ex}")
 
-            # platform fallback: on Windows try Win32 API by window title
+            # platform fallback: try platform-specific API to bring window to front
             try:
                 if _IS_WINDOWS:
                     title = getattr(window, 'title', None) or getattr(window, 'uid', None)
@@ -293,6 +311,13 @@ def _create_tray(window, quit_event):
                             return
                     except Exception as ex:
                         _tlog(f"[Tray] bring by pid failed: {ex}")
+                elif _IS_MACOS:
+                    try:
+                        ok = _bring_window_to_front_macos()
+                        if ok:
+                            return
+                    except Exception as ex:
+                        _tlog(f"[Tray] macOS bring front failed: {ex}")
             except Exception as ex:
                 _tlog(f"[Tray] platform bring front error: {ex}")
 
@@ -355,8 +380,9 @@ def _create_tray(window, quit_event):
         pass
 
 if __name__ == '__main__':
-    # Prevent multiple instances: use Windows named mutex
+    # Prevent multiple instances
     _mutex = None
+    _lock_file = None
     if _IS_WINDOWS:
         try:
             kernel32 = ctypes.windll.kernel32
@@ -369,6 +395,18 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"[InstanceCheck] error: {e}")
             pass
+    elif _IS_MACOS:
+        try:
+            import fcntl
+            _lock_path = os.path.join(os.path.expanduser('~'), '.visualSPT.lock')
+            _lock_file = open(_lock_path, 'w')
+            fcntl.flock(_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            # Another instance is running
+            _bring_window_to_front_macos()
+            sys.exit(0)
+        except Exception as e:
+            print(f"[InstanceCheck] macOS lock error: {e}")
 
     api = Api()
 

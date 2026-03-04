@@ -4,3 +4,5 @@
 *.spec
 /test_data/output
 /test/output
+logo.iconset/
+logo.icns
