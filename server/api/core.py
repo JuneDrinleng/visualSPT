@@ -738,6 +738,14 @@ class Api:
                 })
         return {'version': version, 'files': files}
 
+    def get_version(self):
+        """Return the current application version."""
+        try:
+            from server.version import __version__ as current_version
+        except ImportError:
+            current_version = "unknown"
+        return {"version": current_version}
+
     def check_update(self):
         """Check GitHub for a newer version and return update info to frontend."""
         import sys
@@ -768,13 +776,25 @@ class Api:
             if not matched:
                 matched = info['files'][0] if info['files'] else {}
 
+            import tempfile
+            filename = matched.get('name', 'update')
+            dest = os.path.join(tempfile.gettempdir(), filename)
+            already_downloaded = (
+                os.path.exists(dest)
+                and os.path.getsize(dest) > 0
+                and self._update_status.get("status") == "done"
+                and self._update_status.get("path") == dest
+            )
+
             return {
                 "has_update":      True,
                 "current_version": current_version,
                 "version":         remote_ver,
                 "url":             matched.get('url', ''),
-                "filename":        matched.get('name', 'update'),
+                "filename":        filename,
                 "size":            matched.get('size', 0),
+                "has_downloaded":  already_downloaded,
+                "download_path":   dest if already_downloaded else None,
             }
         except Exception as e:
             return {"has_update": False, "current_version": current_version, "error": str(e)}
@@ -818,7 +838,7 @@ class Api:
 
     def install_update(self, path):
         """Launch installer and exit the application."""
-        import threading, subprocess, sys, os
+        import threading, sys, os
 
         if not path or not os.path.exists(path):
             return {"error": f"Installer not found: {path}"}
@@ -828,11 +848,9 @@ class Api:
             time.sleep(0.4)
             try:
                 if sys.platform == 'win32':
-                    subprocess.Popen(
-                        [path, '/S'],
-                        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-                    )
+                    os.startfile(path)
                 elif sys.platform == 'darwin':
+                    import subprocess
                     subprocess.Popen(['open', path])
             except Exception as e:
                 print(f"[Update] Failed to launch installer: {e}")

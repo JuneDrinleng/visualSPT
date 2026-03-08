@@ -403,10 +403,6 @@
           Contact
         </a>
 
-        <button id="check-update-btn" class="action-btn" onclick="window.checkForUpdates && window.checkForUpdates(false)">
-          <i data-lucide="refresh-cw"></i>
-          Check updates
-        </button>
         <a
           id="researchgate-btn"
           class="action-btn"
@@ -551,13 +547,5 @@
       console.error("Year compute failed", e);
     }
 
-    const checkBtn = document.getElementById("check-update-btn");
-    if (checkBtn) checkBtn.addEventListener("click", function () {
-      if (typeof window.checkForUpdates === "function") {
-        window.checkForUpdates(false);
-      } else {
-        alert("Update check is not ready yet. Please try again later.");
-      }
-    });
   })();
 </script>

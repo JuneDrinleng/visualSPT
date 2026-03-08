@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function _preloadPages() {
-    const pageKeys = ["traj-viewer", "activate-traj", "msd-viewer", "others"];
+    const pageKeys = ["traj-viewer", "activate-traj", "msd-viewer", "settings", "others"];
     const app = document.getElementById("app");
     await Promise.all(
       pageKeys.map(async (key) => {
@@ -1372,9 +1372,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
   }
 
-  function _showToast(info) {
+  function _showToast(info, alreadyDownloaded) {
     _removeToast();
     _updateInfo = info;
+    const dlLabel = alreadyDownloaded ? "Install now" : "Download update";
     const toast = document.createElement("div");
     toast.id = "update-toast";
     toast.innerHTML = `
@@ -1384,7 +1385,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
       <div class="ut-body">A new version is available. Current v${info.current_version}. Download and install now?</div>
       <div class="ut-actions">
-        <button class="ut-btn primary" id="ut-dl">Download update</button>
+        <button class="ut-btn primary" id="ut-dl">${dlLabel}</button>
         <button class="ut-btn secondary" id="ut-dismiss">Later</button>
       </div>
       <div class="ut-progress-wrap" id="ut-prog" style="display:none">
@@ -1394,7 +1395,11 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     document.body.appendChild(toast);
     document.getElementById("ut-dismiss").onclick = _removeToast;
-    document.getElementById("ut-dl").onclick = _startDownload;
+    if (alreadyDownloaded && info.download_path) {
+      document.getElementById("ut-dl").onclick = () => _install(info.download_path);
+    } else {
+      document.getElementById("ut-dl").onclick = _startDownload;
+    }
   }
 
   function _startDownload() {
@@ -1462,7 +1467,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await window.pywebview.api.check_update();
       if (res.has_update) {
-        _showToast(res);
+        if (res.has_downloaded && res.download_path) {
+          _showToast(res, true);
+        } else {
+          _showToast(res, false);
+        }
       } else if (!silent) {
         const cur = res.current_version || "?";
         const msg = res.error

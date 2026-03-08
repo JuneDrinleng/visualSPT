@@ -1,0 +1,496 @@
+<link rel="stylesheet" href="css/viewer.css" />
+<style>
+  #settings-page-container {
+    background: #ffffff;
+    height: 100%;
+    padding: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .settings-inner {
+    max-width: 560px;
+    width: 90%;
+    padding: 32px 0 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .settings-section {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .settings-section-header {
+    padding: 14px 20px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .settings-section-header i {
+    width: 16px;
+    height: 16px;
+    color: var(--active-color, #6366f1);
+    flex-shrink: 0;
+  }
+
+  .settings-section-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 0.01em;
+  }
+
+  .settings-section-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .version-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .version-label {
+    font-size: 0.82rem;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  .version-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--active-color, #6366f1);
+    background: rgba(99, 102, 241, 0.1);
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+  }
+
+  .update-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .update-desc {
+    font-size: 0.78rem;
+    color: #64748b;
+    flex: 1;
+  }
+
+  #settings-check-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 8px;
+    background: var(--active-color, #6366f1);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  #settings-check-btn:hover:not(:disabled) {
+    background: var(--active-hover, #4f46e5);
+    transform: translateY(-1px);
+  }
+
+  #settings-check-btn:disabled {
+    background: #94a3b8;
+    cursor: default;
+  }
+
+  #settings-check-btn i {
+    width: 13px;
+    height: 13px;
+  }
+
+  .update-status-area {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+  }
+
+  .update-status-area.visible {
+    display: flex;
+  }
+
+  .update-info-box {
+    background: #f0f4ff;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .update-info-box.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+  }
+
+  .update-info-box.error {
+    background: #fff1f2;
+    border-color: #fecdd3;
+  }
+
+  .update-info-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  .update-info-sub {
+    font-size: 0.75rem;
+    color: #475569;
+    line-height: 1.4;
+  }
+
+  .update-action-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .update-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .update-action-btn i {
+    width: 12px;
+    height: 12px;
+  }
+
+  .update-action-btn.primary {
+    background: var(--active-color, #6366f1);
+    color: #fff;
+  }
+
+  .update-action-btn.primary:hover:not(:disabled) {
+    background: var(--active-hover, #4f46e5);
+  }
+
+  .update-action-btn.primary:disabled {
+    background: #94a3b8;
+    cursor: default;
+  }
+
+  .update-action-btn.secondary {
+    background: #e2e8f0;
+    color: #475569;
+  }
+
+  .update-action-btn.secondary:hover:not(:disabled) {
+    background: #cbd5e1;
+  }
+
+  .update-progress-wrap {
+    display: none;
+  }
+
+  .update-progress-wrap.visible {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .update-progress-bg {
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .update-progress-fill {
+    height: 100%;
+    background: var(--active-color, #6366f1);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  .update-progress-text {
+    font-size: 0.7rem;
+    color: #64748b;
+    text-align: right;
+  }
+</style>
+
+<div id="settings-page-container">
+  <div class="settings-inner">
+
+    <div class="settings-section">
+      <div class="settings-section-header">
+        <i data-lucide="info"></i>
+        <span class="settings-section-title">About</span>
+      </div>
+      <div class="settings-section-body">
+        <div class="version-row">
+          <span class="version-label">Application</span>
+          <span class="version-badge">visualSPT</span>
+        </div>
+        <div class="version-row">
+          <span class="version-label">Current Version</span>
+          <span class="version-badge" id="settings-version-badge">Loading...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-header">
+        <i data-lucide="refresh-cw"></i>
+        <span class="settings-section-title">Updates</span>
+      </div>
+      <div class="settings-section-body">
+        <div class="update-row">
+          <span class="update-desc">Check if a new version of visualSPT is available.</span>
+          <button id="settings-check-btn">
+            <i data-lucide="search"></i>
+            Check for updates
+          </button>
+        </div>
+
+        <div class="update-status-area" id="settings-update-area">
+          <div class="update-info-box" id="settings-update-box">
+            <div class="update-info-title" id="settings-update-title"></div>
+            <div class="update-info-sub" id="settings-update-sub"></div>
+            <div class="update-action-row" id="settings-update-actions" style="display:none">
+              <button class="update-action-btn primary" id="settings-dl-btn">
+                <i data-lucide="download"></i>
+                Download update
+              </button>
+              <button class="update-action-btn secondary" id="settings-dismiss-btn">Later</button>
+            </div>
+            <div class="update-progress-wrap" id="settings-prog-wrap">
+              <div class="update-progress-bg">
+                <div class="update-progress-fill" id="settings-prog-fill"></div>
+              </div>
+              <div class="update-progress-text" id="settings-prog-text">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  let _settingsUpdateInfo = null;
+  let _settingsPollTimer = null;
+
+  function _stopPoll() {
+    if (_settingsPollTimer) { clearInterval(_settingsPollTimer); _settingsPollTimer = null; }
+  }
+
+  function _hideUpdateArea() {
+    const area = document.getElementById("settings-update-area");
+    if (area) area.classList.remove("visible");
+    _stopPoll();
+  }
+
+  function _showUpdateArea(boxClass) {
+    const area = document.getElementById("settings-update-area");
+    const box  = document.getElementById("settings-update-box");
+    if (area) area.classList.add("visible");
+    if (box) {
+      box.className = "update-info-box";
+      if (boxClass) box.classList.add(boxClass);
+    }
+  }
+
+  function _setUpdateText(title, sub) {
+    const t = document.getElementById("settings-update-title");
+    const s = document.getElementById("settings-update-sub");
+    if (t) t.textContent = title || "";
+    if (s) s.textContent = sub  || "";
+  }
+
+  function _showActions(show) {
+    const a = document.getElementById("settings-update-actions");
+    if (a) a.style.display = show ? "" : "none";
+  }
+
+  function _showProgress(show) {
+    const p = document.getElementById("settings-prog-wrap");
+    if (p) p.classList.toggle("visible", show);
+  }
+
+  function _setProgress(pct, text) {
+    const fill = document.getElementById("settings-prog-fill");
+    const txt  = document.getElementById("settings-prog-text");
+    if (fill) fill.style.width = pct + "%";
+    if (txt)  txt.textContent  = text || (pct + "%");
+  }
+
+  function _setCheckBtnState(busy) {
+    const btn = document.getElementById("settings-check-btn");
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.innerHTML = busy
+      ? '<i data-lucide="loader-2" class="icon-spin"></i> Checking...'
+      : '<i data-lucide="search"></i> Check for updates';
+    if (typeof lucide !== "undefined") lucide.createIcons();
+  }
+
+  async function _runCheck() {
+    if (!window.pywebview) return;
+    _setCheckBtnState(true);
+    _hideUpdateArea();
+
+    try {
+      const res = await window.pywebview.api.check_update();
+      _setCheckBtnState(false);
+
+      if (res.has_update) {
+        _settingsUpdateInfo = res;
+        _showUpdateArea();
+        _setUpdateText(
+          `v${res.version} available`,
+          `Current version: v${res.current_version}. A new version is available.`
+        );
+
+        if (res.has_downloaded && res.download_path) {
+          _showActions(true);
+          const dlBtn = document.getElementById("settings-dl-btn");
+          if (dlBtn) {
+            dlBtn.innerHTML = '<i data-lucide="package-check"></i> Install now';
+            dlBtn.onclick = () => _install(res.download_path);
+            if (typeof lucide !== "undefined") lucide.createIcons();
+          }
+        } else {
+          _showActions(true);
+          const dlBtn = document.getElementById("settings-dl-btn");
+          if (dlBtn) {
+            dlBtn.innerHTML = '<i data-lucide="download"></i> Download update';
+            dlBtn.onclick = _startDownload;
+            if (typeof lucide !== "undefined") lucide.createIcons();
+          }
+        }
+
+        const dimBtn = document.getElementById("settings-dismiss-btn");
+        if (dimBtn) dimBtn.onclick = _hideUpdateArea;
+      } else if (res.error) {
+        _showUpdateArea("error");
+        _setUpdateText("Failed to check for updates", res.error);
+        _showActions(false);
+        _showProgress(false);
+      } else {
+        _showUpdateArea("success");
+        _setUpdateText("You're up to date!", `visualSPT v${res.current_version} is the latest version.`);
+        _showActions(false);
+        _showProgress(false);
+      }
+    } catch (e) {
+      _setCheckBtnState(false);
+      _showUpdateArea("error");
+      _setUpdateText("Check failed", String(e));
+      _showActions(false);
+      _showProgress(false);
+    }
+  }
+
+  function _startDownload() {
+    if (!_settingsUpdateInfo || !window.pywebview) return;
+    const dlBtn = document.getElementById("settings-dl-btn");
+    const dimBtn = document.getElementById("settings-dismiss-btn");
+    if (dlBtn) { dlBtn.disabled = true; dlBtn.innerHTML = '<i data-lucide="loader-2" class="icon-spin"></i> Downloading...'; if (typeof lucide !== "undefined") lucide.createIcons(); }
+    if (dimBtn) dimBtn.disabled = true;
+    _showProgress(true);
+    _setProgress(0, "0%");
+
+    window.pywebview.api
+      .start_download(_settingsUpdateInfo.url, _settingsUpdateInfo.filename)
+      .then(() => { _settingsPollTimer = setInterval(_poll, 600); })
+      .catch((err) => {
+        if (dlBtn) { dlBtn.disabled = false; dlBtn.innerHTML = '<i data-lucide="download"></i> Retry'; if (typeof lucide !== "undefined") lucide.createIcons(); }
+        if (dimBtn) dimBtn.disabled = false;
+        _setProgress(0, "Download failed");
+      });
+  }
+
+  function _poll() {
+    if (!window.pywebview) return;
+    window.pywebview.api.get_download_progress().then((s) => {
+      const pct = s.progress || 0;
+      _setProgress(pct, pct + "%");
+
+      if (s.status === "done") {
+        _stopPoll();
+        _setProgress(100, "Download complete");
+        const dlBtn = document.getElementById("settings-dl-btn");
+        const dimBtn = document.getElementById("settings-dismiss-btn");
+        if (dlBtn) {
+          dlBtn.disabled = false;
+          dlBtn.innerHTML = '<i data-lucide="package-check"></i> Install now';
+          dlBtn.onclick = () => _install(s.path);
+          if (typeof lucide !== "undefined") lucide.createIcons();
+        }
+        if (dimBtn) dimBtn.disabled = false;
+      } else if (s.status === "error") {
+        _stopPoll();
+        const dimBtn = document.getElementById("settings-dismiss-btn");
+        if (dimBtn) dimBtn.disabled = false;
+        _setProgress(0, "Download failed: " + (s.error || ""));
+      }
+    }).catch(() => {});
+  }
+
+  function _install(path) {
+    if (!window.pywebview || !path) return;
+    const dlBtn = document.getElementById("settings-dl-btn");
+    if (dlBtn) { dlBtn.disabled = true; dlBtn.innerHTML = '<i data-lucide="loader-2" class="icon-spin"></i> Installing...'; if (typeof lucide !== "undefined") lucide.createIcons(); }
+    window.pywebview.api.install_update(path)
+      .then(() => { _hideUpdateArea(); })
+      .catch((err) => {
+        if (dlBtn) { dlBtn.disabled = false; dlBtn.innerHTML = '<i data-lucide="package-check"></i> Install now'; if (typeof lucide !== "undefined") lucide.createIcons(); }
+        alert("Failed to start installer: " + err);
+      });
+  }
+
+  window.init_settings = function (root) {
+    if (typeof lucide !== "undefined") lucide.createIcons();
+
+    const checkBtn = document.getElementById("settings-check-btn");
+    if (checkBtn) checkBtn.onclick = _runCheck;
+
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.get_version) {
+      window.pywebview.api.get_version().then((res) => {
+        const badge = document.getElementById("settings-version-badge");
+        if (badge && res && res.version) badge.textContent = "v" + res.version;
+      }).catch(() => {});
+    }
+  };
+})();
+</script>
