@@ -27,10 +27,10 @@ def should_bump_major(commit_msg):
         return False
 
     keyword_patterns = [
-        r"implement.*feature",
-        r"feature.*implement",
-        r"new.*feature",
-        r"add.*feature",
+        r"实现.*功能",
+        r"功能.*实现",
+        r"新.*功能",
+        r"增加.*功能",
     ]
 
     for pattern in keyword_patterns:
