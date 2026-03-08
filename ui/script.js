@@ -1,12 +1,11 @@
-// Simple page loader + per-page initializers
+﻿
 document.addEventListener("DOMContentLoaded", () => {
-  // 显示 window-frame（移除 display: none）
+
   var windowFrame = document.getElementById("windowFrame");
   if (windowFrame) {
     windowFrame.style.display = "";
   }
 
-  // 库加载进度追踪：轮询后端真实进度并更新进度条
   function trackLoadingProgress() {
     const progressBar = document.querySelector(
       "#loadingOverlay .loading-progress-bar",
@@ -21,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         !window.pywebview.api ||
         !window.pywebview.api.get_loading_progress
       ) {
-        // API 尚未就绪，显示初始进度
+
         if (progressBar) progressBar.style.width = "3%";
         return;
       }
@@ -39,17 +38,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (res.done || pct >= 100) {
             clearInterval(poll);
-            // 确保进度条到 100%
+
             if (progressBar) progressBar.style.width = "100%";
             if (loadingText) loadingText.textContent = "Ready";
             if (loadingSubtext) loadingSubtext.textContent = "";
 
-            // 短暂停留让用户看到 100%，然后淡出
             setTimeout(() => {
               const overlay = document.getElementById("loadingOverlay");
               if (overlay) {
                 overlay.classList.add("fade-out");
-                setTimeout(() => overlay.remove(), 250);
+                setTimeout(() => {
+                  overlay.remove();
+
+                  if (typeof window.checkForUpdates === "function") {
+                    window.checkForUpdates(true);
+                  }
+                }, 250);
               }
             }, 200);
             console.log("[UI] Libraries ready, overlay removed");
@@ -58,13 +62,17 @@ document.addEventListener("DOMContentLoaded", () => {
         .catch(() => {});
     }, 150);
 
-    // 安全超时：10 秒后无论如何都移除覆盖层
     setTimeout(() => {
       clearInterval(poll);
       const overlay = document.getElementById("loadingOverlay");
       if (overlay) {
         overlay.classList.add("fade-out");
-        setTimeout(() => overlay.remove(), 250);
+        setTimeout(() => {
+          overlay.remove();
+          if (typeof window.checkForUpdates === "function") {
+            window.checkForUpdates(true);
+          }
+        }, 250);
         console.log("[UI] Timeout, overlay removed");
       }
     }, 10000);
@@ -73,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const navBtns = document.querySelectorAll(".nav-btn");
 
-  // Custom titlebar buttons (shell-level)
   const minBtn = document.getElementById("min-btn");
   const closeBtn = document.getElementById("close-btn");
 
@@ -85,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (closeBtn) {
     closeBtn.addEventListener("click", () => {
-      // hide instead of close
+
       if (window.pywebview) window.pywebview.api.hide_window();
       else window.close && window.close();
     });
@@ -94,7 +101,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function setActiveButton(targetKey) {
     navBtns.forEach((b) => {
       const t = b.getAttribute("data-target");
-      // Map data-target to page key for comparison
+
       const pageKey = t.replace(/^page-/, "");
       if (pageKey === targetKey) b.classList.add("active");
       else b.classList.remove("active");
@@ -115,112 +122,118 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   let _currentPage = null;
-  // 页面 HTML 缓存：避免重复 fetch 已加载过的页面
-  const _pageCache = {};
+  const _initializedPages = new Set();
 
-  async function loadPage(key, pushState = true) {
-    if (key === _currentPage) return;
-    const app = document.getElementById("app");
-    try {
-      // 优先使用缓存
-      let html;
-      if (_pageCache[key]) {
-        html = _pageCache[key];
-      } else {
-        const res = await fetch(`pages/${key}.html`);
-        if (!res.ok) throw new Error(`Failed to load page ${key}`);
-        html = await res.text();
-        _pageCache[key] = html;
-      }
-      app.innerHTML = html;
-      // ensure any <link> in the fragment is applied (browsers will handle it when injected)
-      // remove stale per-page stylesheets
-      const existing = document.querySelectorAll("link[data-page-css]");
-      existing.forEach((n) => n.remove());
-      // relocate any link elements from the injected HTML into head and mark them
-      const temp = document.createElement("div");
-      temp.innerHTML = html;
-      const links = temp.querySelectorAll('link[rel="stylesheet"]');
-      links.forEach((lnk) => {
-        const href = lnk.getAttribute("href");
-        if (href) {
-          const linkEl = document.createElement("link");
-          linkEl.rel = "stylesheet";
-          linkEl.href = href;
-          linkEl.setAttribute("data-page-css", key);
-          document.head.appendChild(linkEl);
-        }
-      });
-      // re-set innerHTML after extracting links to avoid duplicate tags
-      const cleanHtml = html.replace(/<link[^>]+>/gi, "");
-
-      // Extract and execute scripts manually (innerHTML doesn't execute scripts)
-      const tempDiv = document.createElement("div");
-      tempDiv.innerHTML = cleanHtml;
-      const scripts = tempDiv.querySelectorAll("script");
-
-      // Set HTML without scripts first
-      app.innerHTML = cleanHtml.replace(
-        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-        "",
-      );
-
-      // Execute each script
-      scripts.forEach((oldScript) => {
-        const newScript = document.createElement("script");
-        // Copy attributes
-        Array.from(oldScript.attributes).forEach((attr) => {
-          newScript.setAttribute(attr.name, attr.value);
-        });
-        // Copy script content
-        newScript.textContent = oldScript.textContent;
-        // Append to app to execute
-        app.appendChild(newScript);
-      });
-
-      // Re-initialize Lucide icons in dynamically loaded content
-      if (typeof lucide !== "undefined") lucide.createIcons();
-      setActiveButton(key);
-      _currentPage = key;
-      if (pushState) history.pushState({ page: key }, "", `#${key}`);
-      // call page initializer if exists
-      const initName = `init_${key.replace(/-/g, "_")}`;
-      if (typeof window[initName] === "function") {
-        window[initName]();
-      }
-    } catch (err) {
-      app.innerHTML = `<div style="padding:40px;color:#c0392b">Failed to load page: ${err.message}</div>`;
-    }
+  function _injectPageCSS(html, key) {
+    if (document.querySelector(`link[data-page-css="${key}"]`)) return;
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    temp.querySelectorAll('link[rel="stylesheet"]').forEach((lnk) => {
+      const href = lnk.getAttribute("href");
+      if (!href) return;
+      const el = document.createElement("link");
+      el.rel = "stylesheet";
+      el.href = href;
+      el.setAttribute("data-page-css", key);
+      document.head.appendChild(el);
+    });
   }
 
-  // nav button wiring
+  async function _preloadPages() {
+    const pageKeys = ["traj-viewer", "activate-traj", "msd-viewer", "others"];
+    const app = document.getElementById("app");
+    await Promise.all(
+      pageKeys.map(async (key) => {
+        try {
+          const res = await fetch(`pages/${key}.html`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const html = await res.text();
+          _injectPageCSS(html, key);
+
+          const linkStripped = html.replace(/<link[^>]+>/gi, "");
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = linkStripped;
+          const scriptDefs = Array.from(tempDiv.querySelectorAll("script")).map((s) => ({
+            text: s.textContent,
+            attrs: Array.from(s.attributes),
+          }));
+
+          const cleanHtml = linkStripped.replace(
+            /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+            "",
+          );
+          const container = document.createElement("div");
+          container.id = `page-${key}`;
+          container.className = "page-root";
+          container.innerHTML = cleanHtml;
+
+          app.appendChild(container);
+
+          scriptDefs.forEach(({ text, attrs }) => {
+            const s = document.createElement("script");
+            attrs.forEach((a) => s.setAttribute(a.name, a.value));
+            s.textContent = text;
+            container.appendChild(s);
+          });
+        } catch (err) {
+          console.error(`[page] Failed to preload ${key}:`, err);
+        }
+      })
+    );
+    if (typeof lucide !== "undefined") lucide.createIcons();
+  }
+
+  function switchPage(key, pushState = true) {
+    if (key === _currentPage) return;
+
+    if (_currentPage) {
+      const prev = document.getElementById(`page-${_currentPage}`);
+      if (prev) {
+        if (typeof prev._cleanup === "function") prev._cleanup();
+        prev.style.display = "none";
+      }
+    }
+
+    const container = document.getElementById(`page-${key}`);
+    if (!container) {
+      console.warn(`[page] container not found: ${key}`);
+      return;
+    }
+
+    container.style.display = "flex";
+
+    if (!_initializedPages.has(key)) {
+      _initializedPages.add(key);
+      const initFn = window[`init_${key.replace(/-/g, "_")}`];
+      if (typeof initFn === "function") initFn(container);
+    }
+
+    setActiveButton(key);
+    updateNavIndicator();
+    _currentPage = key;
+    if (pushState) history.pushState({ page: key }, "", `#${key}`);
+  }
+
   navBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const target = btn.getAttribute("data-target");
-      // map old ids to page keys
-      const pageKey = target.replace(/^page-/, "");
-      loadPage(pageKey);
+      const pageKey = btn.getAttribute("data-target").replace(/^page-/, "");
+      switchPage(pageKey);
     });
   });
 
-  // Initialize nav indicator position on first load
-  updateNavIndicator(); // handle back/forward
   window.addEventListener("popstate", (e) => {
     const key =
       (e.state && e.state.page) ||
       location.hash.replace(/^#/, "") ||
       "traj-viewer";
-    loadPage(key, false);
+    switchPage(key, false);
   });
 
-  // initial load: use hash or default
+  updateNavIndicator();
   const initial = location.hash.replace(/^#/, "") || "traj-viewer";
-  loadPage(initial, false);
+  _preloadPages().then(() => switchPage(initial, false));
 
-  // --- Per-page initializer: traj-viewer ---
-  window.init_traj_viewer = function () {
-    // attach previous logic but only for elements inside #app
-    const root = document.getElementById("app");
+  window.init_traj_viewer = function (root) {
     const uploadBtn = root.querySelector("#uploadBtn");
     const filePathDisplay = root.querySelector("#file-path-display");
     const plotImg = root.querySelector("#plot-image");
@@ -278,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const params = getPlotParams();
       indexLbl.textContent = params.index + 1;
       if (window.pywebview) {
-        // show loading indicator while backend generates the image
+
         loading.style.display = "block";
         plotImg.style.display = "none";
         errorMsg.style.display = "none";
@@ -317,7 +330,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // wire events
     if (slider) {
       slider.addEventListener("input", () => {
         indexLbl.textContent = parseInt(slider.value) + 1;
@@ -466,14 +478,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const totalTrajs = parseInt(slider.max) + 1;
         const progressBar = batchSaveBtn.querySelector(".batch-progress");
         const batchLabel = batchSaveBtn.querySelector(".batch-label");
-        // Ask backend for folder selection
+
         window.pywebview.api.select_folder().then((folderRes) => {
           if (!folderRes || folderRes.cancelled) return;
           const folder = folderRes.path;
           batchSaveBtn.disabled = true;
           progressBar.style.width = "0%";
           let completed = 0;
-          // Sequential batch save
+
           function saveNext(idx) {
             if (idx >= totalTrajs) {
               batchLabel.innerHTML =
@@ -508,9 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   };
 
-  // --- Per-page initializer: msd-viewer ---
-  window.init_msd_viewer = function () {
-    const root = document.getElementById("app");
+  window.init_msd_viewer = function (root) {
     const uploadBtn = root.querySelector("#uploadBtn");
     const filePathDisplay = root.querySelector("#file-path-display");
     const plotImg = root.querySelector("#plot-image");
@@ -744,9 +754,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   };
 
-  // --- Per-page initializer: activate-traj (dynamic/activation visualization) ---
-  window.init_activate_traj = function () {
-    const root = document.getElementById("app");
+  window.init_activate_traj = function (root) {
     const uploadBtn = root.querySelector("#uploadBtn");
     const filePathDisplay = root.querySelector("#file-path-display");
     const canvas = root.querySelector("#anim-canvas");
@@ -781,7 +789,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let isFileLoaded = false;
 
-    // --- Canvas animation state ---
     let trajX = [];
     let trajY = [];
     let trajLen = 0;
@@ -808,9 +815,8 @@ document.addEventListener("DOMContentLoaded", () => {
       };
     }
 
-    // --- Coolwarm color interpolation (blue → white → red) ---
     function coolwarmColor(t) {
-      // t in [0,1]: 0=blue(cold), 0.5=light gray, 1=red(warm)
+
       const r =
         t < 0.5
           ? Math.round(59 + t * 2 * (221 - 59))
@@ -852,7 +858,6 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fillStyle = "#fff";
       ctx.fillRect(0, 0, W, H);
 
-      // compute data bounds
       let maxAbsX = 0,
         maxAbsY = 0;
       for (let i = 0; i < trajLen; i++) {
@@ -863,7 +868,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const dataLimit = Math.max(maxAbsX, maxAbsY) * 1.1 || 1;
 
-      // plot area with padding
       const timebarH = params.show_timebar ? 30 * dpr : 0;
       const labelPad = params.show_axis_labels ? 40 * dpr : 10 * dpr;
       const pad = labelPad;
@@ -880,19 +884,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return oy + (1 - (dy / dataLimit + 1) * 0.5) * plotSize;
       }
 
-      // grid lines
       if (params.show_grid) {
         ctx.save();
         ctx.strokeStyle = "rgba(128,128,128,0.25)";
         ctx.lineWidth = 1 * dpr;
         ctx.setLineDash([4 * dpr, 4 * dpr]);
-        // horizontal zero
+
         const zeroY = toCanvasY(0);
         ctx.beginPath();
         ctx.moveTo(ox, zeroY);
         ctx.lineTo(ox + plotSize, zeroY);
         ctx.stroke();
-        // vertical zero
+
         const zeroX = toCanvasX(0);
         ctx.beginPath();
         ctx.moveTo(zeroX, oy);
@@ -901,7 +904,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.restore();
       }
 
-      // axis labels and tick marks
       if (params.show_axis_labels) {
         ctx.save();
         const fontSize = Math.round(7 * dpr);
@@ -921,7 +923,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.lineWidth = 1.5 * dpr;
         ctx.setLineDash([]);
 
-        // X axis ticks: only draw upward from zero line (zeroY2 - tickLen to zeroY2)
         ctx.beginPath();
         ctx.moveTo(xTickPos, zeroY2 - tickLen);
         ctx.lineTo(xTickPos, zeroY2);
@@ -931,7 +932,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.lineTo(xTickNeg, zeroY2);
         ctx.stroke();
 
-        // X axis labels: centered below tick, just under the zero line
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.fillText(
@@ -945,7 +945,6 @@ document.addEventListener("DOMContentLoaded", () => {
           zeroY2 + 3 * dpr,
         );
 
-        // Y axis ticks: only draw rightward from zero line (zeroX2 to zeroX2 + tickLen)
         ctx.beginPath();
         ctx.moveTo(zeroX2, yTickPos);
         ctx.lineTo(zeroX2 + tickLen, yTickPos);
@@ -955,7 +954,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.lineTo(zeroX2 + tickLen, yTickNeg);
         ctx.stroke();
 
-        // Y axis labels: right-aligned, to the left of the zero line near tick
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
         ctx.fillText(
@@ -972,7 +970,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.restore();
       }
 
-      // trail
       let trailLen =
         params.trail_len > 0
           ? Math.min(params.trail_len, trajLen)
@@ -995,7 +992,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // particle
       const px = toCanvasX(trajX[frame]);
       const py = toCanvasY(trajY[frame]);
       ctx.beginPath();
@@ -1006,23 +1002,22 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.strokeStyle = "#fff";
       ctx.stroke();
 
-      // timebar
       if (params.show_timebar) {
         const barY =
           oy + plotSize + (params.show_axis_labels ? 22 * dpr : 8 * dpr);
         const barH = 8 * dpr;
         const barW = (plotSize * 3) / 4;
         const barX = ox + (plotSize - barW) / 2;
-        // background
+
         for (let i = 0; i < barW; i++) {
           ctx.fillStyle = coolwarmColor(i / barW);
           ctx.fillRect(barX + i, barY, 1, barH);
         }
-        // border
+
         ctx.strokeStyle = "#aaa";
         ctx.lineWidth = 0.6 * dpr;
         ctx.strokeRect(barX, barY, barW, barH);
-        // progress indicator
+
         const progX = barX + (frame / Math.max(1, trajLen - 1)) * barW;
         ctx.beginPath();
         ctx.moveTo(progX, barY - 2 * dpr);
@@ -1030,7 +1025,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.strokeStyle = "#333";
         ctx.lineWidth = 1.5 * dpr;
         ctx.stroke();
-        // label
+
         const fontSize2 = Math.round(7 * dpr);
         ctx.font = `italic 600 ${fontSize2}px sans-serif`;
         ctx.fillStyle = "#000";
@@ -1042,7 +1037,6 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
 
-      // update frame label
       if (frameLbl) frameLbl.textContent = `${frame + 1} / ${trajLen}`;
       if (frameSlider) frameSlider.value = frame;
     }
@@ -1108,7 +1102,6 @@ document.addEventListener("DOMContentLoaded", () => {
           canvas.style.display = "block";
           errorMsg.style.display = "none";
 
-          // setup frame slider
           if (frameSlider) {
             frameSlider.max = trajLen - 1;
             frameSlider.value = 0;
@@ -1125,7 +1118,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // play/pause button
     if (playPauseBtn) {
       playPauseBtn.addEventListener("click", () => {
         if (animPlaying) stopAnim();
@@ -1133,7 +1125,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // frame slider scrubbing
     if (frameSlider) {
       frameSlider.addEventListener("input", () => {
         stopAnim();
@@ -1142,7 +1133,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // resize observer
     const ro = new ResizeObserver(() => {
       if (canvas.style.display !== "none") {
         resizeCanvas();
@@ -1151,7 +1141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (canvas && canvas.parentElement) ro.observe(canvas.parentElement);
 
-    // when visual params change (not data), just redraw without re-fetching
     function onVisualChange() {
       if (trajLen > 0) drawFrame(animFrame);
     }
@@ -1163,7 +1152,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (showGridSwitch)
       showGridSwitch.addEventListener("change", onVisualChange);
 
-    // when data-affecting params change, re-fetch data
     function onDataChange() {
       if (!isFileLoaded) return;
       stopAnim();
@@ -1174,7 +1162,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (zeroStartSwitch)
       zeroStartSwitch.addEventListener("change", onDataChange);
 
-    // wire trajectory slider
     if (slider) {
       slider.addEventListener("input", () => {
         indexLbl.textContent = parseInt(slider.value) + 1;
@@ -1241,7 +1228,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const originalText = saveBtn.innerHTML;
         saveBtn.innerHTML = "<span>⏳</span> Saving...";
         saveBtn.disabled = true;
-        // Ask for save path first
+
         window.pywebview.api
           .select_gif_save_path(parseInt(slider.value) || 0)
           .then((pathRes) => {
@@ -1251,7 +1238,7 @@ document.addEventListener("DOMContentLoaded", () => {
               return;
             }
             const savePath = pathRes.path;
-            // Render all frames on offscreen canvas without affecting preview
+
             const gifScale = 2;
             const baseW = canvas.width / (window.devicePixelRatio || 1);
             const baseH = canvas.height / (window.devicePixelRatio || 1);
@@ -1299,7 +1286,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const hiresScale = 3;
           const baseW = canvas.width / (window.devicePixelRatio || 1);
           const baseH = canvas.height / (window.devicePixelRatio || 1);
-          // Sequential batch: fetch data, render all frames, save as GIF
+
           function saveNext(idx) {
             if (idx >= totalTrajs) {
               batchLabel.innerHTML =
@@ -1336,7 +1323,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 offscreen.width = Math.round(baseW * hiresScale);
                 offscreen.height = Math.round(baseH * hiresScale);
                 const fps = fpsInput ? parseInt(fpsInput.value) || 20 : 20;
-                // Render all frames for this trajectory
+
                 const frames = [];
                 for (let f = 0; f < trajLen; f++) {
                   drawFrame(f, offscreen, hiresScale);
@@ -1368,5 +1355,124 @@ document.addEventListener("DOMContentLoaded", () => {
           saveNext(0);
         });
       });
+
+    root._cleanup = stopAnim;
   };
 });
+
+
+
+(function () {
+  let _updateInfo = null;
+  let _pollTimer = null;
+
+  function _removeToast() {
+    const t = document.getElementById("update-toast");
+    if (t) t.remove();
+    if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+  }
+
+  function _showToast(info) {
+    _removeToast();
+    _updateInfo = info;
+    const toast = document.createElement("div");
+    toast.id = "update-toast";
+    toast.innerHTML = `
+      <div class="ut-header">
+        <span class="ut-badge">UPDATE</span>
+        <span class="ut-title">v${info.version} available</span>
+      </div>
+      <div class="ut-body">A new version is available. Current v${info.current_version}. Download and install now?</div>
+      <div class="ut-actions">
+        <button class="ut-btn primary" id="ut-dl">Download update</button>
+        <button class="ut-btn secondary" id="ut-dismiss">Later</button>
+      </div>
+      <div class="ut-progress-wrap" id="ut-prog" style="display:none">
+        <div class="ut-progress-bg"><div class="ut-progress-fill" id="ut-fill"></div></div>
+        <div class="ut-progress-text" id="ut-pct">0%</div>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    document.getElementById("ut-dismiss").onclick = _removeToast;
+    document.getElementById("ut-dl").onclick = _startDownload;
+  }
+
+  function _startDownload() {
+    if (!_updateInfo || !window.pywebview) return;
+    const dlBtn = document.getElementById("ut-dl");
+    const dimBtn = document.getElementById("ut-dismiss");
+    const prog = document.getElementById("ut-prog");
+    if (dlBtn) { dlBtn.disabled = true; dlBtn.textContent = "Downloading..."; }
+    if (dimBtn) dimBtn.disabled = true;
+    if (prog) prog.style.display = "";
+
+    window.pywebview.api
+      .start_download(_updateInfo.url, _updateInfo.filename)
+      .then(() => {
+        _pollTimer = setInterval(_poll, 600);
+      })
+      .catch((err) => {
+        if (dlBtn) { dlBtn.disabled = false; dlBtn.textContent = "Retry"; }
+        if (dimBtn) dimBtn.disabled = false;
+        console.error("[Update] start_download failed:", err);
+      });
+  }
+
+  function _poll() {
+    if (!window.pywebview) return;
+    window.pywebview.api.get_download_progress().then((s) => {
+      const fill = document.getElementById("ut-fill");
+      const pct  = document.getElementById("ut-pct");
+      const dlBtn = document.getElementById("ut-dl");
+      const pct_val = s.progress || 0;
+      if (fill) fill.style.width = pct_val + "%";
+      if (pct)  pct.textContent  = pct_val + "%";
+
+      if (s.status === "done") {
+        clearInterval(_pollTimer); _pollTimer = null;
+        if (fill) fill.style.width = "100%";
+        if (pct)  pct.textContent  = "Download complete";
+        if (dlBtn) {
+          dlBtn.disabled = false;
+          dlBtn.textContent = "Install now";
+          dlBtn.onclick = () => _install(s.path);
+        }
+      } else if (s.status === "error") {
+        clearInterval(_pollTimer); _pollTimer = null;
+        if (pct) pct.textContent = "Download failed: " + (s.error || "");
+        const dimBtn = document.getElementById("ut-dismiss");
+        if (dimBtn) dimBtn.disabled = false;
+      }
+    }).catch(() => {});
+  }
+
+  function _install(path) {
+    if (!window.pywebview || !path) return;
+    window.pywebview.api.install_update(path)
+      .then(() => _removeToast())
+      .catch((err) => alert("Failed to start installer: " + err));
+  }
+
+  
+  window.checkForUpdates = async function (silent) {
+    if (!window.pywebview) {
+      if (!silent) alert("Not running in pywebview environment.");
+      return;
+    }
+    try {
+      const res = await window.pywebview.api.check_update();
+      if (res.has_update) {
+        _showToast(res);
+      } else if (!silent) {
+        const cur = res.current_version || "?";
+        const msg = res.error
+          ? "Failed to check for updates: " + res.error
+          : `visualSPT is already up to date (v${cur}).`;
+        alert(msg);
+      }
+    } catch (e) {
+      if (!silent) alert("Failed to check for updates: " + e);
+    }
+  };
+})();
+

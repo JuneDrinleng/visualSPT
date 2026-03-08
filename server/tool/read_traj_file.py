@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import pandas as pd
 def read_trackmate_csv(file_path):
     """
@@ -47,7 +47,6 @@ def read_npz_traj(file_path):
     keys = list(npz.keys())
     candidates = ['track', 'traj', 'trajs', 'tracks', 'trajectory','trajectories']
 
-    # pick a sensible key: prefer keys containing candidate words (case-insensitive)
     selected_key = None
     for k in keys:
         kl = k.lower()
@@ -55,7 +54,6 @@ def read_npz_traj(file_path):
             selected_key = k
             break
 
-    # fallback: if only one array, use it; otherwise find first array-like candidate
     if selected_key is None:
         if len(keys) == 1:
             selected_key = keys[0]
@@ -74,13 +72,12 @@ def read_npz_traj(file_path):
 
     arr = npz[selected_key]
 
-    # Helper: convert a list/sequence of variable-length trajs to padded 3D array
     def _from_sequence(seq):
         trajs = [np.asarray(t) for t in seq]
         B = len(trajs)
         if B == 0:
             return np.empty((0, 0, 0)), 0
-        # ensure each trajectory has shape (T, D)
+
         for i, t in enumerate(trajs):
             t = np.asarray(t)
             if t.ndim == 1:
@@ -95,11 +92,9 @@ def read_npz_traj(file_path):
             result[i, :t.shape[0], :t.shape[1]] = t
         return result, B
 
-    # Handle object arrays / lists of trajectories
     if isinstance(arr, (list, tuple)) or getattr(arr, 'dtype', None) == object:
         return _from_sequence(arr)
 
-    # Handle numpy arrays
     arr = np.asarray(arr)
     if arr.ndim == 3:
         B, max_len, dimension = arr.shape
@@ -109,7 +104,7 @@ def read_npz_traj(file_path):
         return arr, B
     elif arr.ndim == 2:
         max_len, dimension = arr.shape
-        # if transposed (more columns than rows), transpose
+
         if max_len < dimension:
             arr = arr.T
             max_len, dimension = arr.shape
@@ -122,6 +117,6 @@ def read_npz_traj(file_path):
         raise ValueError(f"Unhandled array shape for key '{selected_key}': {arr.shape}")
 
 if __name__ == "__main__":
-    # read_trackmate_csv("test_data\\traj\\trackmate-output-csv.csv")
+
     result,B=read_npz_traj("test_data\\traj\\vepinn-collect-npz.npz")
     pass

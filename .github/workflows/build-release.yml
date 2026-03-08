@@ -59,11 +59,20 @@ jobs:
           --add-data "assets;assets"
           main.py
 
-      - name: Upload Windows artifact
+      - name: Install NSIS
+        run: choco install nsis -y
+
+      - name: Build Windows installer
+        run: >
+          makensis
+          /DAPPVERSION=${{ steps.get_version.outputs.version }}
+          installer.nsi
+
+      - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: dist/visualSPT.exe
+          path: dist/visualSPT-Setup.exe
 
     outputs:
       version: ${{ steps.get_version.outputs.version }}
@@ -92,8 +101,8 @@ jobs:
             inkscape assets/logo/icon.svg --export-type=png --export-filename=logo.iconset/icon_${size}x${size}.png -w $size -h $size
           done
 
-          cp logo.iconset/icon_32x32.png  logo.iconset/icon_16x16@2x.png
-          cp logo.iconset/icon_64x64.png  logo.iconset/icon_32x32@2x.png
+          cp logo.iconset/icon_32x32.png   logo.iconset/icon_16x16@2x.png
+          cp logo.iconset/icon_64x64.png   logo.iconset/icon_32x32@2x.png
           cp logo.iconset/icon_256x256.png logo.iconset/icon_128x128@2x.png
           cp logo.iconset/icon_512x512.png logo.iconset/icon_256x256@2x.png
           cp logo.iconset/icon_1024x1024.png logo.iconset/icon_512x512@2x.png
@@ -120,18 +129,18 @@ jobs:
           --add-data "assets:assets"
           main.py
 
-      - name: Package macOS app as DMG
+      - name: Package macOS app as pkg installer
         run: |
-          mkdir -p dist/dmg
-          cp -R dist/visualSPT.app dist/dmg/
-          ln -s /Applications dist/dmg/Applications
-          hdiutil create -volname "visualSPT" -srcfolder dist/dmg -ov -format UDZO dist/visualSPT-mac.dmg
+          pkgbuild \
+            --install-location /Applications \
+            --component dist/visualSPT.app \
+            dist/visualSPT.pkg
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: dist/visualSPT-mac.dmg
+          path: dist/visualSPT.pkg
 
   release:
     needs: [build-windows, build-macos]
@@ -163,10 +172,10 @@ jobs:
           set -euo pipefail
 
           REPO="${PUBLIC_REPO:-$GITHUB_REPOSITORY}"
-          WIN_ASSET_PATH="dist/visualSPT.exe"
-          WIN_ASSET_NAME="visualSPT.exe"
-          MAC_ASSET_PATH="dist/visualSPT-mac.dmg"
-          MAC_ASSET_NAME="visualSPT-mac.dmg"
+          WIN_ASSET_PATH="dist/visualSPT-Setup.exe"
+          WIN_ASSET_NAME="visualSPT-Setup.exe"
+          MAC_ASSET_PATH="dist/visualSPT.pkg"
+          MAC_ASSET_NAME="visualSPT.pkg"
 
           WIN_SHA256=$(sha256sum "$WIN_ASSET_PATH" | awk '{print $1}')
           WIN_FILE_SIZE=$(stat -c%s "$WIN_ASSET_PATH")
@@ -183,10 +192,12 @@ jobs:
               name: "${WIN_ASSET_NAME}"
               size: ${WIN_FILE_SIZE}
               sha256: "${WIN_SHA256}"
+              platform: "win32"
             - url: "${MAC_DOWNLOAD_URL}"
               name: "${MAC_ASSET_NAME}"
               size: ${MAC_FILE_SIZE}
               sha256: "${MAC_SHA256}"
+              platform: "darwin"
           releaseTag: "${VERSION_TAG}"
           releasePage: "https://github.com/${REPO}/releases/tag/${VERSION_TAG}"
           notes: "Auto-built from ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
@@ -202,7 +213,7 @@ jobs:
           tag_name: v${{ needs.build-windows.outputs.version }}
           name: visualSPT v${{ needs.build-windows.outputs.version }}
           files: |
-            dist/visualSPT.exe
-            dist/visualSPT-mac.dmg
+            dist/visualSPT-Setup.exe
+            dist/visualSPT.pkg
             latest.yml
           generate_release_notes: true

@@ -1,4 +1,4 @@
-import io
+﻿import io
 import base64
 import os
 import webview
@@ -24,21 +24,22 @@ class Api:
 
         self.is_loading_libs = False
         self.libs_loaded = False
-        self._loading_progress = 0      # 0-100 loading progress
-        self._loading_stage = ''        # current loading stage description
+        self._loading_progress = 0      
+        self._loading_stage = ''        
         self._always_on_top = False
 
-        # Plot cache: (params_tuple) -> base64 image string
         self._plot_cache = {}
         self._plot_cache_max = 50
-        # MSD cache keyed by scale (float) -> dict with keys: lags, eamsd, tamsd_mean, tamsd_std, tamsd_arr
+
         self._msd_cache = {}
+
+        self._update_status = {"status": "idle", "progress": 0, "path": None, "error": None}
 
     def set_window(self, window):
         self._window = window
 
     def window_show(self):
-        """显示窗口 (在前端准备就绪后调用)"""
+        """Show the window (called after frontend is ready)."""
         try:
             if self._window:
                 self._window.show()
@@ -49,7 +50,7 @@ class Api:
             return {"error": str(e)}
 
     def get_loading_progress(self):
-        """返回当前加载进度 (0-100) 和阶段描述"""
+        """Return current loading progress (0-100) and stage description."""
         return {
             'progress': self._loading_progress,
             'stage': self._loading_stage,
@@ -66,7 +67,7 @@ class Api:
         print("[System] Loading the libraries...")
 
         try:
-            # Stage 1: matplotlib (heaviest)
+
             import matplotlib
             self._loading_progress = 20
             matplotlib.use('Agg')
@@ -76,21 +77,18 @@ class Api:
             self._loading_stage = 'Loading pandas...'
             print("[System] matplotlib loaded")
 
-            # Stage 2: pandas
             import pandas as pd
             self.pd = pd
             self._loading_progress = 65
             self._loading_stage = 'Loading numpy...'
             print("[System] pandas loaded")
 
-            # Stage 3: numpy
             import numpy as np
             self.np = np
             self._loading_progress = 80
             self._loading_stage = 'Loading data readers...'
             print("[System] numpy loaded")
 
-            # Stage 4: project-specific readers
             from server.tool.read_traj_file import read_trackmate_csv, read_npy_traj, read_npz_traj
             self.read_trackmate_csv = read_trackmate_csv
             self.read_npy_traj = read_npy_traj
@@ -129,7 +127,7 @@ class Api:
             traj_data, traj_number = api_io.read_trajectory_from_path(file_path, self)
             self.trajectories = traj_data
             self.current_file = os.path.basename(file_path)
-            self._plot_cache.clear()  # clear cache on new file
+            self._plot_cache.clear()  
             self._msd_cache.clear()
             first_traj_img = ""
             if traj_number > 0:
@@ -192,16 +190,15 @@ class Api:
             if index < 0 or index >= len(self.trajectories):
                 return {"error": "Index out of range"}
 
-            # Always compute ensemble statistics (EAMSD and ensemble TAMSD mean/std).
-            # The `plot_eamsd` flag will only control whether EAMSD is drawn, not whether
-            # it is computed.
+
+
             lags = None
             eamsd = None
             tamsd = None
             tamsd_mean = None
             tamsd_std = None
             lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
-            # apply dt scaling to lag axis if provided by frontend
+
             try:
                 dt = float(dt)
             except Exception:
@@ -214,7 +211,6 @@ class Api:
             if plot_tamsd:
                 tamsd = self._compute_tamsd(index, scale)
 
-            # If neither EAMSD (when requested to plot) nor TAMSD are available, abort
             if (plot_eamsd and (eamsd is None or len(eamsd) == 0)) and (not plot_tamsd or tamsd is None or len(tamsd) == 0):
                 return {"error": "No MSD data available to plot"}
 
@@ -320,7 +316,6 @@ class Api:
             show_title = options.get('show_title', True)
             show_axis_labels = options.get('show_axis_labels', True)
 
-            # Always compute ensemble EAMSD/TAMSD mean/std; plotting controlled by flags
             lags = None
             eamsd = None
             tamsd = None
@@ -329,7 +324,7 @@ class Api:
             lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
             if plot_tamsd:
                 tamsd = self._compute_tamsd(index, scale)
-            # apply dt scaling if provided in options
+
             try:
                 dt = float(options.get('dt', 1.0))
             except Exception:
@@ -434,14 +429,12 @@ class Api:
 
             save_path = os.path.join(folder, f"msd_{index}.png")
 
-            # compute ensemble stats and per-trajectory tamsd as done in change_msd
             lags, eamsd, tamsd_mean, tamsd_std = self._compute_eamsd(scale)
             if plot_tamsd:
                 tamsd = self._compute_tamsd(index, scale)
             else:
                 tamsd = None
 
-            # apply dt scaling
             if lags is not None and len(lags) > 0 and dt != 1.0:
                 try:
                     lags = self.np.asarray(lags, dtype=float) * dt
@@ -513,7 +506,7 @@ class Api:
                     data_url = data_url[len(header):]
                 img_bytes = base64.b64decode(data_url)
                 img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
-                # Convert to palette mode for GIF with white background
+
                 bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
                 bg.paste(img, mask=img.split()[3])
                 pil_frames.append(bg.convert("RGB"))
@@ -600,7 +593,6 @@ class Api:
             traceback.print_exc()
             return {"error": str(e)}
 
-    # Window control helpers used by frontend custom title bar
     def hide_window(self):
         try:
             if self._window:
@@ -615,7 +607,7 @@ class Api:
         hwnd = getattr(self._window, '_hwnd', None)
         if hwnd:
             return hwnd
-        # fallback: find by window title
+
         try:
             import ctypes
             return ctypes.windll.user32.FindWindowW(None, self._window.title)
@@ -662,12 +654,11 @@ class Api:
         return {"error": "no window"}
 
     def get_asset(self, filename):
-        """获取资源文件的 base64 编码数据"""
+        """Get base64-encoded data for an asset file."""
         try:
             import sys
             print(f"[Asset] Requesting asset: {filename}")
-            
-            # 获取资源文件根目录
+
             if getattr(sys, 'frozen', False):
                 base_dir = sys._MEIPASS
             else:
@@ -687,8 +678,7 @@ class Api:
                 file_data = f.read()
             
             print(f"[Asset] File size: {len(file_data)} bytes")
-            
-            # 根据文件扩展名确定 MIME 类型
+
             ext = os.path.splitext(filename)[1].lower()
             mime_types = {
                 '.jpg': 'image/jpeg',
@@ -699,8 +689,7 @@ class Api:
                 '.svg': 'image/svg+xml'
             }
             mime_type = mime_types.get(ext, 'application/octet-stream')
-            
-            # 返回 base64 编码的数据
+
             b64_data = base64.b64encode(file_data).decode('utf-8')
             print(f"[Asset] Successfully encoded {filename} as base64")
             return {
@@ -713,6 +702,145 @@ class Api:
             import traceback
             traceback.print_exc()
             return {"error": error_msg}
+
+
+
+    LATEST_YML_URL = "https://github.com/JuneDrinleng/visualSPT/releases/latest/download/latest.yml"
+
+    @staticmethod
+    def _parse_version(v):
+        """Convert '2.12' to a comparable tuple (2, 12)."""
+        try:
+            return tuple(int(x) for x in str(v).strip().split('.'))
+        except Exception:
+            return (0,)
+
+    @staticmethod
+    def _parse_latest_yml(text):
+        """Parse latest.yml with a lightweight parser (no PyYAML dependency)."""
+        import re
+        version_m = re.search(r'^version:\s*["\']?([\d.]+)["\']?', text, re.MULTILINE)
+        version = version_m.group(1) if version_m else None
+
+        files = []
+        blocks = re.split(r'\n\s*-\s*url:', text)
+        for block in blocks[1:]:
+            url_m  = re.match(r'\s*["\']?([^\s"\']+)["\']?', block)
+            name_m = re.search(r'name:\s*["\']?([^\s"\']+)["\']?', block)
+            plat_m = re.search(r'platform:\s*["\']?([^\s"\']+)["\']?', block)
+            size_m = re.search(r'size:\s*(\d+)', block)
+            if url_m:
+                files.append({
+                    'url':      url_m.group(1).strip(),
+                    'name':     name_m.group(1).strip() if name_m else '',
+                    'platform': plat_m.group(1).strip() if plat_m else '',
+                    'size':     int(size_m.group(1)) if size_m else 0,
+                })
+        return {'version': version, 'files': files}
+
+    def check_update(self):
+        """Check GitHub for a newer version and return update info to frontend."""
+        import sys
+        import urllib.request
+        try:
+            from server.version import __version__ as current_version
+        except ImportError:
+            current_version = "0.0"
+
+        try:
+            req = urllib.request.Request(
+                self.LATEST_YML_URL,
+                headers={"User-Agent": "visualSPT-updater/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                content = resp.read().decode('utf-8')
+        except Exception as e:
+            return {"has_update": False, "current_version": current_version, "error": str(e)}
+
+        try:
+            info = self._parse_latest_yml(content)
+            remote_ver = info.get('version') or '0.0'
+            if self._parse_version(remote_ver) <= self._parse_version(current_version):
+                return {"has_update": False, "current_version": current_version, "remote_version": remote_ver}
+
+            platform_key = 'win32' if sys.platform == 'win32' else ('darwin' if sys.platform == 'darwin' else sys.platform)
+            matched = next((f for f in info['files'] if f.get('platform') == platform_key), None)
+            if not matched:
+                matched = info['files'][0] if info['files'] else {}
+
+            return {
+                "has_update":      True,
+                "current_version": current_version,
+                "version":         remote_ver,
+                "url":             matched.get('url', ''),
+                "filename":        matched.get('name', 'update'),
+                "size":            matched.get('size', 0),
+            }
+        except Exception as e:
+            return {"has_update": False, "current_version": current_version, "error": str(e)}
+
+    def start_download(self, url, filename):
+        """Download installer in a background thread."""
+        import threading, tempfile, os, urllib.request
+
+        dest = os.path.join(tempfile.gettempdir(), filename)
+        self._update_status = {"status": "downloading", "progress": 0, "path": None, "error": None}
+
+        def _dl():
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "visualSPT-updater/1.0"})
+                with urllib.request.urlopen(req) as resp, open(dest, 'wb') as f:
+                    total = int(resp.headers.get('Content-Length', 0))
+                    downloaded = 0
+                    while True:
+                        chunk = resp.read(65536)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if total:
+                            self._update_status["progress"] = min(100, int(downloaded * 100 / total))
+                self._update_status["status"] = "done"
+                self._update_status["path"] = dest
+                self._update_status["progress"] = 100
+                print(f"[Update] Download complete: {dest}")
+            except Exception as e:
+                self._update_status["status"] = "error"
+                self._update_status["error"] = str(e)
+                print(f"[Update] Download error: {e}")
+
+        threading.Thread(target=_dl, daemon=True).start()
+        return {"ok": True}
+
+    def get_download_progress(self):
+        """Return current download progress."""
+        return dict(self._update_status)
+
+    def install_update(self, path):
+        """Launch installer and exit the application."""
+        import threading, subprocess, sys, os
+
+        if not path or not os.path.exists(path):
+            return {"error": f"Installer not found: {path}"}
+
+        def _do():
+            import time
+            time.sleep(0.4)
+            try:
+                if sys.platform == 'win32':
+                    subprocess.Popen(
+                        [path, '/S'],
+                        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                    )
+                elif sys.platform == 'darwin':
+                    subprocess.Popen(['open', path])
+            except Exception as e:
+                print(f"[Update] Failed to launch installer: {e}")
+                return
+            os._exit(0)
+
+        threading.Thread(target=_do, daemon=True).start()
+        return {"ok": True}
 
     def _plot_trajectory_by_index(self, index, scale=1.0, zero_start=False, x_unit="px", y_unit="px", custom_title="", show_markers=True, show_title=True, show_axis_labels=True, show_grid=True, show_colorbar=True, show_ticks=True, show_border=True):
         traj = self.trajectories[index]
@@ -733,7 +861,7 @@ class Api:
 
     def _compute_eamsd(self, scale=1.0):
         scale_key = float(scale)
-        # reuse cached ensemble MSD if available for the same scale
+
         cache = self._msd_cache.get(scale_key)
         if cache is not None:
             return cache.get('lags'), cache.get('eamsd'), cache.get('tamsd_mean'), cache.get('tamsd_std')
@@ -752,9 +880,9 @@ class Api:
         try:
             res = eamsd_cal(X)
         except Exception:
-            # fallback: attempt old interface
+
             res = eamsd_cal(X)
-        # eamsd_cal may return either msd array or (eamsd, tamsd_mean, tamsd_std)
+
         tamsd_mean = None
         tamsd_std = None
         tamsd_arr = None
@@ -767,7 +895,7 @@ class Api:
                 tamsd_mean = res[1]
             if len(res) >= 3:
                 tamsd_std = res[2]
-            # optional fourth return value: full per-trajectory TAMSD array
+
             if len(res) >= 4:
                 tamsd_arr = res[3]
         else:
@@ -776,10 +904,10 @@ class Api:
         if eamsd is None:
             return None, None, None, None
         lags = self.np.arange(len(eamsd))
-        # if only one trajectory in ensemble, do not provide std (no ensemble spread)
+
         if len(trajs) <= 1:
             tamsd_std = None
-        # cache ensemble results and optional per-trajectory TAMSD array
+
         self._msd_cache[scale_key] = {
             'lags': lags,
             'eamsd': eamsd,
@@ -795,18 +923,18 @@ class Api:
         if len(x) < 2:
             return None
         traj_xy = self.np.stack([x, y], axis=1)
-        # try using cached per-trajectory TAMSD from ensemble computation to avoid recompute
+
         cache = self._msd_cache.get(float(scale))
         if cache is not None:
             tamsd_arr = cache.get('tamsd_arr')
             if tamsd_arr is not None:
                 try:
                     row = tamsd_arr[index]
-                    # ensure numpy array
+
                     return self.np.asarray(row)
                 except Exception:
                     pass
-        # fallback: compute TAMSD for single trajectory
+
         return tamsd_cal(traj_xy)
 
     def get_trajectory_data(self, index, scale=1.0, zero_start=False):
@@ -820,7 +948,7 @@ class Api:
                 x, y = api_plot.extract_xy(traj, self.pd, self.np)
                 x = self.np.asarray(x, dtype=float)
                 y = self.np.asarray(y, dtype=float)
-                # filter non-finite
+
                 valid = self.np.isfinite(x) & self.np.isfinite(y)
                 x = x[valid]
                 y = y[valid]

@@ -1,6 +1,6 @@
-/* Viewer-specific styles: left plot, right controls, sliders, buttons */
+﻿
 
-/* =============== Animations (viewer-only, base.css provides shared ones) =============== */
+
 @keyframes slideInLeft {
   from {
     opacity: 0;
@@ -58,8 +58,6 @@
   position: relative;
   min-width: 0;
   min-height: 0;
-  animation: slideInLeft 0.4s ease-out;
-  will-change: opacity;
 }
 
 #plot-container {
@@ -93,7 +91,6 @@
   height: 100%;
   width: 100%;
   background-color: var(--panel-bg);
-  animation: fadeInSlideUp 0.6s ease-out;
 }
 
 #loading {
@@ -105,15 +102,13 @@
   background: rgba(255, 255, 255, 0.95);
   padding: 14px 24px;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   z-index: 5;
   color: var(--active-color);
   font-weight: 600;
   font-size: 0.85rem;
   align-items: center;
   gap: 10px;
-  animation: scaleIn 0.3s ease-out;
-  backdrop-filter: blur(4px);
 }
 
 .icon-spin {
@@ -121,16 +116,15 @@
 }
 
 #control-panel {
-  background: #fff;
+  background: #fafbfc;
   padding: 0 15px;
   border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  height: 36px;
+  height: 38px;
   font-size: 0.8rem;
-  animation: fadeInSlideUp 0.5s ease-out 0.2s backwards;
 }
 
 input[type="range"] {
@@ -157,60 +151,55 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   border-radius: 50%;
   background: var(--active-color);
-  cursor: pointer; /* Changed from grab to avoid blurry Windows cursor */
-  margin-top: -5px; /* (thumbHeight / 2) - (trackHeight / 2) | 7 - 2 = 5 */
+  cursor: pointer; 
+  margin-top: -5px; 
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: transform 0.1s;
 }
 input[type="range"]::-webkit-slider-thumb:active {
-  cursor: pointer; /* Changed from grabbing */
+  cursor: pointer; 
   transform: scale(1.1);
 }
 
 .viz-right {
-  width: 220px;
+  width: 224px;
   background: var(--panel-bg);
   border-left: 1px solid var(--border-color);
-  padding: 12px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   overflow-y: auto;
   flex-shrink: 0;
-  animation: slideInRight 0.4s ease-out;
-  will-change: opacity;
 }
 
 .panel-title {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--text-color);
-  margin-bottom: 2px;
-  padding-left: 8px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  background: rgba(99, 102, 241, 0.06);
+  border-radius: 5px;
   border-left: 3px solid var(--active-color);
-  line-height: 1.2;
-  letter-spacing: 0.02em;
-  animation: slideInLeft 0.5s ease-out;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .setting-group {
   background: #fff;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 9px 10px;
+  border-radius: 7px;
   border: 1px solid var(--border-color);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  animation: fadeInSlideUp 0.4s ease-out;
+  box-shadow: var(--shadow-sm);
   transition:
-    box-shadow 0.25s ease-out,
-    border-color 0.25s ease-out,
-    transform 0.25s ease-out;
-  will-change: transform, box-shadow, border-color;
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .setting-group:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: var(--active-color);
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.4);
 }
 
 .setting-label {
@@ -230,15 +219,12 @@ input[type="range"]::-webkit-slider-thumb:active {
   height: 26px;
   background: #fff;
   transition:
-    border-color 0.2s ease-out,
-    box-shadow 0.2s ease-out,
-    transform 0.2s ease-out;
-  will-change: border-color, box-shadow;
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .form-input:focus {
   border-color: var(--active-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .unit-row {
@@ -254,8 +240,9 @@ input[type="range"]::-webkit-slider-thumb:active {
 .switch {
   position: relative;
   display: inline-block;
-  width: 30px;
-  height: 16px;
+  width: 32px;
+  height: 17px;
+  flex-shrink: 0;
 }
 .switch input {
   opacity: 0;
@@ -269,26 +256,27 @@ input[type="range"]::-webkit-slider-thumb:active {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
+  background-color: #d1d5db;
+  transition: background-color 0.2s ease;
   border-radius: 34px;
 }
 .slider:before {
   position: absolute;
   content: "";
-  height: 12px;
-  width: 12px;
+  height: 13px;
+  width: 13px;
   left: 2px;
   bottom: 2px;
   background: #fff;
-  transition: 0.4s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, background 0.2s ease;
   border-radius: 50%;
 }
 input:checked + .slider {
   background-color: var(--active-color);
 }
 input:checked + .slider:before {
-  transform: translateX(14px);
+  transform: translateX(15px);
 }
 
 .action-btn {
@@ -303,42 +291,31 @@ input:checked + .slider:before {
   align-items: center;
   gap: 6px;
   transition:
-    background-color 0.25s ease-out,
-    transform 0.25s ease-out,
-    box-shadow 0.25s ease-out;
-  position: relative;
-  overflow: hidden;
-  will-change: transform, box-shadow;
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .action-btn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.2);
-  transition: left 0.25s ease-out;
+  display: none;
 }
 .action-btn:hover {
   background-color: var(--active-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 .action-btn:hover::before {
-  left: 100%;
+  display: none;
 }
 
 .action-area {
   margin-top: auto;
   padding-top: 10px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-color);
 }
 .save-hint {
   margin: 0 0 6px 0;
-  font-size: 0.72rem;
-  color: #999;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
   text-align: center;
+  line-height: 1.35;
 }
 .save-btn-row {
   display: flex;
@@ -359,17 +336,14 @@ input:checked + .slider:before {
   justify-content: center;
   gap: 6px;
   transition:
-    background-color 0.25s ease-out,
-    transform 0.25s ease-out,
-    box-shadow 0.25s ease-out;
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
   position: relative;
   overflow: hidden;
-  will-change: transform, box-shadow;
 }
 .btn-save:hover {
   background: var(--active-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 .btn-save:disabled {
   cursor: not-allowed;

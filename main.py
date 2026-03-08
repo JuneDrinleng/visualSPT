@@ -1,4 +1,4 @@
-import webview
+﻿import webview
 import os
 import sys
 import threading
@@ -6,13 +6,11 @@ import time
 from server.api.core import Api
 import logging
 
-# PyInstaller compatible: get resource file root directory
 if getattr(sys, 'frozen', False):
     _BASE_DIR = sys._MEIPASS
 else:
     _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# optional tray support
 try:
     import pystray
     from PIL import Image, ImageDraw
@@ -20,22 +18,19 @@ try:
 except Exception:
     _HAS_PYSTRAY = False
 
-# toggle tray-related logging
 _TRAY_LOG = False
 
 def _tlog(*args, **kwargs):
     if _TRAY_LOG:
         print(*args, **kwargs)
-# event used to keep process alive until user quits from tray
+
 _TRAY_QUIT_EVENT = threading.Event()
 
-# Platform detection
 _IS_WINDOWS = os.name == 'nt'
 _IS_MACOS = sys.platform == 'darwin'
-_wndproc_ref = None  # prevent GC of the callback
+_wndproc_ref = None  
 _original_wndproc = None
 
-# macOS helper: bring window to front using NSApplication
 if _IS_MACOS:
     def _bring_window_to_front_macos():
         """Activate the application and bring all windows to front on macOS."""
@@ -58,7 +53,7 @@ if _IS_WINDOWS:
         from ctypes import wintypes
 
         user32 = ctypes.windll.user32
-        # Select correct 64/32-bit function
+
         if ctypes.sizeof(ctypes.c_void_p) == 8:
             _SetWindowLongPtr = user32.SetWindowLongPtrW
             _GetWindowLongPtr = user32.GetWindowLongPtrW
@@ -91,7 +86,6 @@ if _IS_WINDOWS:
     except Exception:
         _IS_WINDOWS = False
 
-    # additional helper: bring front by current process id (enumerate top-level windows)
     if _IS_WINDOWS:
         try:
             EnumWindows = user32.EnumWindows
@@ -108,7 +102,7 @@ if _IS_WINDOWS:
                     length = GetWindowTextLength(hwnd)
                     buf = ctypes.create_unicode_buffer(length + 1)
                     GetWindowText(hwnd, buf, length + 1)
-                    # get process id
+
                     lpdw = wintypes.DWORD()
                     GetWindowThreadProcessId(hwnd, ctypes.byref(lpdw))
                     win_pid = lpdw.value
@@ -143,12 +137,10 @@ def _enable_dwm_shadow(hwnd):
     try:
         dwmapi = ctypes.windll.dwmapi
 
-        # DwmSetWindowAttribute(DWMWA_NCRENDERING_POLICY=2, DWMNCRP_ENABLED=2)
-        # Force enable non-client area DWM rendering, prerequisite for shadow
+
         policy = ctypes.c_int(2)
         dwmapi.DwmSetWindowAttribute(hwnd, 2, ctypes.byref(policy), ctypes.sizeof(policy))
 
-        # DwmExtendFrameIntoClientArea extends frame into client area, triggers DWM shadow
         class MARGINS(ctypes.Structure):
             _fields_ = [
                 ('cxLeftWidth', ctypes.c_int),
@@ -159,13 +151,12 @@ def _enable_dwm_shadow(hwnd):
         m = MARGINS(1, 1, 1, 1)
         dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(m))
 
-        # Windows 11 (build 22000+): enable native rounded corners
-        # DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2
+
         try:
             corner_pref = ctypes.c_int(2)
             dwmapi.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(corner_pref), ctypes.sizeof(corner_pref))
         except Exception:
-            pass  # Windows 10 does not support this, ignore
+            pass  
 
     except Exception as e:
         _tlog(f"[DWMShadow] error: {e}")
@@ -192,11 +183,11 @@ def _subclass_window(hwnd):
     _original_wndproc = _SetWindowLongPtr(hwnd, GWLP_WNDPROC, ctypes.cast(_wndproc_ref, ctypes.c_void_p).value)
 
 def _setup_window_async():
-    """设置窗口样式和阴影 (Windows 专用) - 已由 on_window_loaded 取代"""
-    pass  # kept for backward compatibility
+    """Set window style and shadow (Windows only), replaced by on_window_loaded."""
+    pass  
 
 def _preload_libraries_async():
-    """异步预加载库，不阻塞主线程"""
+    """Preload libraries asynchronously without blocking the main thread."""
     try:
         api.preload_libraries()
         print("[System] Background library loading completed")
@@ -204,8 +195,8 @@ def _preload_libraries_async():
         print(f"[System] Background library loading error: {e}")
 
 def on_window_loaded():
-    """webview loaded 回调：DOM 已就绪，立即设置窗口并显示"""
-    # 窗口样式设置（无延迟）
+    """webview loaded callback: DOM is ready, set up and show the window immediately."""
+
     if _IS_WINDOWS:
         try:
             title = getattr(window, 'title', 'visualSPT')
@@ -228,7 +219,6 @@ def on_window_loaded():
         except Exception as e:
             _tlog(f"[WindowSetup] error: {e}")
 
-    # 立即显示窗口，不等待库加载
     try:
         window.show()
         print("[GUI] Window shown via loaded event")
@@ -236,8 +226,8 @@ def on_window_loaded():
         print(f"[GUI] Window show error: {e}")
 
 def on_start_background_loading():
-    """主线程启动函数：仅启动后台库加载"""
-    # 异步加载库 (不阻塞 UI)
+    """Main-thread startup function: only starts background library loading."""
+
     try:
         lib_thread = threading.Thread(target=_preload_libraries_async, daemon=True)
         lib_thread.start()
@@ -268,7 +258,7 @@ def _create_tray(window, quit_event):
                 _tlog('[Tray] window attrs:', [a for a in dir(window) if not a.startswith('_')])
             except Exception:
                 pass
-            # try direct call
+
             if hasattr(window, 'restore'):
                 try:
                     _tlog('[Tray] calling window.restore()')
@@ -287,7 +277,7 @@ def _create_tray(window, quit_event):
                     window.focus()
                 except Exception as ex:
                     _tlog(f"[Tray] window.focus() error: {ex}")
-            # try to execute a small JS to focus the window if possible
+
             try:
                 if hasattr(window, 'evaluate_js'):
                     _tlog('[Tray] calling evaluate_js to focus')
@@ -295,7 +285,6 @@ def _create_tray(window, quit_event):
             except Exception as ex:
                 _tlog(f"[Tray] evaluate_js focus error: {ex}")
 
-            # platform fallback: try platform-specific API to bring window to front
             try:
                 if _IS_WINDOWS:
                     title = getattr(window, 'title', None) or getattr(window, 'uid', None)
@@ -321,7 +310,6 @@ def _create_tray(window, quit_event):
             except Exception as ex:
                 _tlog(f"[Tray] platform bring front error: {ex}")
 
-            # try windows list
             try:
                 for w in getattr(webview, 'windows', []):
                     try:
@@ -340,13 +328,12 @@ def _create_tray(window, quit_event):
             icon.stop()
         except Exception:
             pass
-        # signal main thread to exit
+
         try:
             quit_event.set()
         except Exception:
             pass
 
-        # attempt to shut down the webview cleanly
         try:
             if window is not None:
                 try:
@@ -355,14 +342,13 @@ def _create_tray(window, quit_event):
                 except Exception:
                     pass
                 try:
-                    # some pywebview versions expose destroy_window
+
                     webview.destroy_window(window)
                 except Exception:
                     pass
         except Exception:
             pass
 
-        # final fallback: request pywebview event loop exit
         try:
             webview.exit()
         except Exception:
@@ -373,14 +359,13 @@ def _create_tray(window, quit_event):
         pystray.MenuItem('Quit', on_quit)
     ))
 
-    # run the icon (blocking) in background thread
     try:
         icon.run()
     except Exception:
         pass
 
 if __name__ == '__main__':
-    # Prevent multiple instances
+
     _mutex = None
     _lock_file = None
     if _IS_WINDOWS:
@@ -389,7 +374,7 @@ if __name__ == '__main__':
             _mutex = kernel32.CreateMutexW(None, True, 'visualSPT_SingleInstance_Mutex')
             ERROR_ALREADY_EXISTS = 183
             if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
-                # Another instance is running, try to activate its window and exit
+
                 _bring_window_to_front_by_title('visualSPT')
                 sys.exit(0)
         except Exception as e:
@@ -410,7 +395,7 @@ if __name__ == '__main__':
                     pass
             atexit.register(_release_lock)
         except IOError:
-            # Another instance is running
+
             _bring_window_to_front_macos()
             sys.exit(0)
         except Exception as e:
@@ -423,8 +408,8 @@ if __name__ == '__main__':
         url=get_html_path(),
         js_api=api,
         width=800,
-        height=620,
-        min_size=(800, 620),
+        height=650,
+        min_size=(800, 650),
         frameless=True,
         easy_drag=False,
         transparent=True,
@@ -435,21 +420,18 @@ if __name__ == '__main__':
     
     api.set_window(window)
 
-    # 注册 loaded 事件：DOM 就绪后立即设置窗口并显示
     try:
         window.events.loaded += on_window_loaded
     except Exception as e:
         print(f"[Window] attach loaded handler error: {e}")
 
-    # start tray thread if available
     if _HAS_PYSTRAY:
         t = threading.Thread(target=_create_tray, args=(window, _TRAY_QUIT_EVENT), daemon=False)
         t.start()
 
-    # try to intercept closing event to hide window instead
     try:
         def _on_closing(event=None):
-            # prevent webview from closing, hide instead
+
             try:
                 if event is not None and hasattr(event, 'prevent_default'):
                     event.prevent_default()
@@ -460,24 +442,21 @@ if __name__ == '__main__':
             except Exception as e:
                 print(f"[Window] hide error: {e}")
 
-        # attach closing handler
         try:
             window.events.closing += _on_closing
         except Exception as e:
             print(f"[Window] attach closing handler error: {e}")
-            # fallback: some backends may not support 'closing'; ignore
+
             pass
     except Exception as e:
         print(f"[Window] error in closing handler setup: {e}")
 
-    # webview must run on the main thread
     try:
         webview.start(func=on_start_background_loading, debug=False)
         print("[GUI] webview started")
     except Exception as e:
         print(f"[GUI] webview.start error: {e}")
 
-    # keep process alive until user chooses 'Quit' from tray
     try:
         _TRAY_QUIT_EVENT.wait()
         print("[System] Quit event received, quitting")

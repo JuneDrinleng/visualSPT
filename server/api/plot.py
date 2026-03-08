@@ -1,4 +1,4 @@
-import io
+﻿import io
 import base64
 
 
@@ -11,7 +11,7 @@ def extract_xy(traj, pd, np):
     if np is not None and isinstance(traj, np.ndarray):
         if traj.ndim >= 2 and traj.shape[1] >= 2:
             return traj[:, 0], traj[:, 1]
-    # try sequence
+
     try:
         arr = np.array(traj)
         if arr.ndim >= 2 and arr.shape[1] >= 2:
@@ -189,27 +189,25 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
             ax.loglog(lags_e, eamsd, color=c_orange_dark, lw=2.2, label='EAMSD')
             has_any = True
 
-        # Plot individual trajectory TAMSD (if provided)
         if plot_tamsd and tamsd is not None and len(tamsd) > 0:
             lags_t =lags_e
             ax.loglog(lags_t, tamsd[:len(eamsd)], color=c_green_dark, lw=2.2, label='TAMSD')
             has_any = True
 
-        # Plot ensemble TAMSD mean ± std as a single shaded region (skip lag=0 for log scale)
         tamsd_fill_handle = None
         if plot_tamsd_mean and tamsd_mean is not None and len(tamsd_mean) > 0:
             lags_tm = lags_e
-            # exclude non-positive lags (log scale cannot handle x<=0)
+
             pos_mask = lags_tm >= 0
             if np.any(pos_mask):
                 lags_pos = lags_tm[pos_mask]
                 mean_pos = np.asarray(tamsd_mean, dtype=float)[pos_mask]
-                # only draw filled std band when tamsd_std is provided
+
                 if tamsd_std is not None and len(tamsd_std) == len(tamsd_mean):
                     std_pos = np.asarray(tamsd_std, dtype=float)[pos_mask]
                     lower = mean_pos - std_pos
                     upper = mean_pos + std_pos
-                    # clamp lower to a small positive value for log plotting
+
                     lower = np.where(lower <= 0, 1e-12, lower)
                     try:
                         tamsd_fill_handle = ax.fill_between(lags_pos, lower, upper, color=c_green_base, alpha=0.7, label='TAMSD ± std')
@@ -222,7 +220,6 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
         if not has_any:
             return ""
 
-        # Auto-adjust y-limits: collect positive finite values from plotted series
         try:
             vals = []
             if plot_eamsd and eamsd is not None and len(eamsd) > 0:
@@ -234,7 +231,7 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
             if tamsd_mean is not None and len(tamsd_mean) > 0:
                 arr = np.asarray(tamsd_mean, dtype=float).ravel()
                 vals.append(arr)
-            # include upper band when std present
+
             if tamsd_mean is not None and tamsd_std is not None and len(tamsd_std) == len(tamsd_mean):
                 tm = np.asarray(tamsd_mean, dtype=float)
                 ts = np.asarray(tamsd_std, dtype=float)
@@ -242,14 +239,14 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
 
             if vals:
                 concat = np.concatenate(vals)
-                # keep only positive finite values and ignore artificially clamped tiny values
+
                 mask = np.isfinite(concat) & (concat > 1e-12)
                 concat = concat[mask]
                 if concat.size > 0:
                     ymin = float(concat.min())
                     ymax = float(concat.max())
                     if np.isfinite(ymin) and np.isfinite(ymax) and ymin > 0 and ymax > 0:
-                        # set a reasonable margin: half to double
+
                         ax.set_ylim(ymin / 2.0, ymax * 2.0)
         except Exception:
             pass
@@ -281,7 +278,7 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
                             fc = h.get_facecolor()
                             if hasattr(fc, '__len__') and len(fc) > 0:
                                 rgba = fc[0]
-                                # separate RGB and alpha to avoid double-alpha issues
+
                                 rgb = tuple(rgba[:3]) if len(rgba) >= 3 else tuple(rgba)
                                 alpha = float(rgba[3]) if len(rgba) > 3 else None
                                 new_handles.append(Patch(facecolor=rgb, edgecolor='none', alpha=alpha, label=l))
@@ -327,12 +324,10 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
         x = x * scale
         y = y * scale
 
-    # Implement dynamic-style plotting similar to plot_traj_dynamic: produce a GIF
     try:
         from matplotlib.collections import LineCollection
         import matplotlib.animation as animation
 
-        # trail length and fps defaults
         L = len(x)
         if trail_len and trail_len > 0:
             trail_len = min(trail_len, L)
@@ -343,7 +338,6 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
         except Exception:
             fps = 20
 
-        # figure setup: center around origin similar to attachment
         max_abs_x = np.max(np.abs(x))
         max_abs_y = np.max(np.abs(y))
         limit = max(max_abs_x, max_abs_y) * 1.1
@@ -379,13 +373,11 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
             tick_len = limit * 0.025
             tick_style = dict(color='gray', alpha=0.8, lw=1.5)
 
-            # X axis tick marks and labels at ±limit
             ax.plot([limit, limit], [-tick_len, tick_len], **tick_style)
             ax.plot([-limit, -limit], [-tick_len, tick_len], **tick_style)
             ax.text(limit, -offset, f'{fmt_pos} {x_unit}', ha='center', va='top', **label_style)
             ax.text(-limit, -offset, f'{fmt_neg} {x_unit}', ha='center', va='top', **label_style)
 
-            # Y axis tick marks and labels at ±limit
             ax.plot([-tick_len, tick_len], [limit, limit], **tick_style)
             ax.plot([-tick_len, tick_len], [-limit, -limit], **tick_style)
             ax.text(-offset, limit, f'{fmt_pos} {y_unit}', ha='right', va='center', **label_style)
@@ -395,7 +387,6 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
         lc = LineCollection([], cmap='coolwarm', linewidths=3, capstyle='round', norm=plt.Normalize(0, 1))
         ax.add_collection(lc)
 
-        # Static colorbar showing trail length range (blue → red)
         if show_timebar and ax_bar is not None:
             norm = Normalize(vmin=0, vmax=trail_len)
             cb = ColorbarBase(ax_bar, cmap=plt.cm.coolwarm, norm=norm, orientation='horizontal')
@@ -403,7 +394,7 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
             cb.set_label('')
             cb.outline.set_linewidth(0.6)
             cb.outline.set_edgecolor('#aaa')
-            # Label just above the colorbar
+
             ax_bar.text(0.5, 1.15, f'Trail: {trail_len} frames', transform=ax_bar.transAxes,
                         ha='center', va='bottom', fontsize=7, fontweight='semibold',
                         color='#000', fontstyle='italic')
@@ -431,7 +422,6 @@ def generate_msd_plot(plt, np, lags, eamsd=None, tamsd=None, tamsd_mean=None, ta
 
         ani = animation.FuncAnimation(fig, update, frames=range(L), interval=1000 / fps, blit=True)
 
-        # if a save path is provided, save to it; otherwise save to a temporary GIF and return data URL
         if save_path:
             try:
                 ani.save(save_path, writer='pillow', fps=fps)

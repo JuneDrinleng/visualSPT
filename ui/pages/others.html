@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="css/viewer.css" />
+﻿<link rel="stylesheet" href="css/viewer.css" />
 <style>
   #others-page-container {
     background: #ffffff;
@@ -339,7 +339,7 @@
   <div class="profile-card">
     <div class="profile-header">
       <div id="avatar-wrap">
-        <img id="avatar-img" src="" alt="Avatar" />
+        <img id="avatar-img" src="../../assets/about.jpg" alt="Avatar" />
       </div>
       <div id="name-line">June Drinleng</div>
       <div id="maxim-line">
@@ -403,10 +403,10 @@
           Contact
         </a>
 
-        <!-- <button id="check-update-btn" class="action-btn">
+        <button id="check-update-btn" class="action-btn" onclick="window.checkForUpdates && window.checkForUpdates(false)">
           <i data-lucide="refresh-cw"></i>
-          检查更新
-        </button> -->
+          Check updates
+        </button>
         <a
           id="researchgate-btn"
           class="action-btn"
@@ -423,11 +423,10 @@
 </div>
 
 <script>
-  // 加载头像
+
   (async function () {
     console.log("[Avatar] Starting avatar load...");
 
-    // 等待 pywebview API 准备就绪
     async function waitForAPI(maxWait = 5000) {
       const start = Date.now();
       while (Date.now() - start < maxWait) {
@@ -476,21 +475,20 @@
   })();
 
   (function () {
-    // Initialize Lucide icons after page loads
+
     if (typeof lucide !== "undefined") {
       setTimeout(() => {
         lucide.createIcons();
       }, 100);
     }
 
-    // compute academic year index based on start = Sep 2024
     function ordinalWord(n) {
       if (n === 1) return "First";
       if (n === 2) return "Second";
       if (n === 3) return "Third";
       if (n === 4) return "Fourth";
       if (n === 5) return "Fifth";
-      // fallback to numeric ordinal
+
       const rem100 = n % 100;
       const rem10 = n % 10;
       const suffix =
@@ -506,7 +504,7 @@
 
     try {
       const startYear = 2024;
-      const startMonth = 9; // September (1-based month)
+      const startMonth = 9; 
       const now = new Date();
       const months =
         (now.getFullYear() - startYear) * 12 +
@@ -514,7 +512,6 @@
       const yearPrefixEl = document.getElementById("year-prefix");
       const yearLineEl = document.getElementById("year-line");
 
-      // determine graduated cutoff: after June 2029
       const graduated =
         now.getFullYear() > 2029 ||
         (now.getFullYear() === 2029 && now.getMonth() + 1 > 6);
@@ -526,12 +523,12 @@
       });
 
       if (months < 0) {
-        // not started yet
+
         yearLineEl.textContent = "Starting Sep 2024";
       } else {
         if (graduated) {
           yearLineEl.textContent = "Congratulations for Graduation!";
-          // Update education section to add PhD info
+
           const educationContent = document.querySelector(
             ".info-section .info-content",
           );
@@ -550,27 +547,16 @@
         }
       }
     } catch (e) {
-      // ignore and leave placeholder
+
       console.error("Year compute failed", e);
     }
 
     const checkBtn = document.getElementById("check-update-btn");
-    checkBtn.addEventListener("click", function () {
-      // UI placeholder: actual update logic implemented later in backend
-      if (
-        window.pywebview &&
-        window.pywebview.api &&
-        window.pywebview.api.check_update
-      ) {
-        window.pywebview.api
-          .check_update()
-          .then((res) => {
-            if (res && res.message) alert(res.message);
-            else alert("检查完成 (占位响应)");
-          })
-          .catch((err) => alert("检查更新失败: " + err));
+    if (checkBtn) checkBtn.addEventListener("click", function () {
+      if (typeof window.checkForUpdates === "function") {
+        window.checkForUpdates(false);
       } else {
-        alert("检查更新功能尚未实现。");
+        alert("Update check is not ready yet. Please try again later.");
       }
     });
   })();
