@@ -66,7 +66,7 @@ jobs:
           # Refresh PATH so makensis is found in the same step
           $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" +
                       [System.Environment]::GetEnvironmentVariable("PATH","User")
-          & "$env:ProgramFiles(x86)\NSIS\makensis.exe" /DAPPVERSION=${{ steps.get_version.outputs.version }} installer.nsi
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" /DAPPVERSION=${{ steps.get_version.outputs.version }} installer.nsi
 
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v4
